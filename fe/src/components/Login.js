@@ -1,36 +1,38 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import config from '../config';
-import './Auth.css';
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import config from "../config";
+import "./Auth.css";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setIsLoading(true);
 
     try {
       console.log("Attempting login to:", `${config.API_URL}/api/user/login`);
-      
+
       const response = await axios.post(
         `${config.API_URL}/api/user/login`,
         { email, password },
-        { 
+        {
           withCredentials: true,
           headers: {
-            'Content-Type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
 
       console.log("Login response:", response.data);
       const { accessToken } = response.data;
-      
+
       if (!accessToken) {
         throw new Error("Token tidak ada di response");
       }
@@ -39,17 +41,26 @@ const Login = () => {
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-      
-      if (err.response) {
+
+      if (err.code === "ERR_NETWORK") {
+        setError(
+          "Tidak dapat terhubung ke server. Pastikan server berjalan di " +
+            config.API_URL
+        );
+      } else if (err.response) {
         // Server responded with error
-        setError(err.response.data?.msg || `Server error: ${err.response.status}`);
+        setError(
+          err.response.data?.msg || `Server error: ${err.response.status}`
+        );
       } else if (err.request) {
         // Request made but no response
-        setError(`Tidak dapat terhubung ke server. Pastikan server berjalan di ${config.API_URL}`);
+        setError("Tidak ada respons dari server. Silakan coba lagi.");
       } else {
         // Other errors
         setError(err.message || "Terjadi kesalahan saat login");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -66,6 +77,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
           <div className="form-field">
@@ -75,10 +87,11 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
-          <button type="submit" className="form-button">
-            Login
+          <button type="submit" className="form-button" disabled={isLoading}>
+            {isLoading ? "Loading..." : "Login"}
           </button>
         </form>
         <p className="auth-footer">
@@ -89,4 +102,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

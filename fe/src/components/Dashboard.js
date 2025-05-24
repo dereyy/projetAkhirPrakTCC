@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import './Dashboard.css';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import AddTransaction from "./AddTransaction";
+import "./Dashboard.css";
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [showAddForm, setShowAddForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,12 +21,16 @@ const Dashboard = () => {
     try {
       const response = await axios.get(`${API_URL}/api/transactions`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
+      console.log("Transactions response:", response.data);
       setTransactions(response.data);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching transactions:", error);
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+      }
     }
   };
 
@@ -32,8 +38,8 @@ const Dashboard = () => {
     try {
       const response = await axios.get(`${API_URL}/api/categories`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
       setCategories(response.data);
     } catch (error) {
@@ -42,16 +48,16 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    navigate('/login');
+    localStorage.removeItem("accessToken");
+    navigate("/login");
   };
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${API_URL}/api/transactions/${id}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
       fetchTransactions();
     } catch (error) {
@@ -59,40 +65,85 @@ const Dashboard = () => {
     }
   };
 
+  const handleTransactionAdded = () => {
+    fetchTransactions();
+    setShowAddForm(false);
+  };
+
   return (
     <div className="dashboard-page">
       <div className="container">
-        <button id="btnLogout" onClick={handleLogout}>Logout</button>
-        <h1>Daftar Transaksi</h1>
-        
-        <div className="transaction-grid">
-          {transactions.length === 0 ? (
-            <div id="no-data-message">
-              Anda belum mempunyai riwayat manajemen keuangan, silahkan input terlebih dahulu.
-            </div>
-          ) : (
-            transactions.map(transaction => (
-              <div key={transaction.id} className="transaction-card">
-                <span className={`transaction-type ${transaction.jenis === 'pemasukan' ? 'income' : 'expense'}`}>
-                  {transaction.jenis}
-                </span>
-                <strong>Rp {transaction.nominal}</strong>
-                <div>Kategori: {transaction.kategori}</div>
-                <div>Tanggal: {new Date(transaction.tanggal).toLocaleDateString()}</div>
-                <div>Catatan: {transaction.catatan}</div>
-                <button className="btn-edit" onClick={() => navigate(`/edit/${transaction.id}`)}>Edit</button>
-                <button className="btn-delete" onClick={() => handleDelete(transaction.id)}>Hapus</button>
-              </div>
-            ))
-          )}
+        <div className="dashboard-header">
+          <h1>Dashboard Keuangan</h1>
+          <button id="btnLogout" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
-        <button className="btn-add" onClick={() => navigate('/add')}>
-          + Tambah Transaksi
-        </button>
+        {showAddForm ? (
+          <AddTransaction onTransactionAdded={handleTransactionAdded} />
+        ) : (
+          <>
+            <div className="transaction-grid">
+              {transactions.length === 0 ? (
+                <div id="no-data-message">
+                  Anda belum mempunyai riwayat manajemen keuangan, silahkan
+                  input terlebih dahulu.
+                </div>
+              ) : (
+                transactions.map((transaction) => (
+                  <div key={transaction.id} className="transaction-card">
+                    <span
+                      className={`transaction-type ${
+                        transaction.kategori === "pemasukan"
+                          ? "income"
+                          : "expense"
+                      }`}
+                    >
+                      {transaction.kategori}
+                    </span>
+                    <strong>
+                      Rp{" "}
+                      {transaction.nominal
+                        ? transaction.nominal.toLocaleString("id-ID")
+                        : "0"}
+                    </strong>
+                    <div>
+                      Tanggal:{" "}
+                      {transaction.tanggal
+                        ? new Date(transaction.tanggal).toLocaleDateString(
+                            "id-ID"
+                          )
+                        : "-"}
+                    </div>
+                    <div>Catatan: {transaction.catatan || "-"}</div>
+                    <div className="transaction-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => navigate(`/edit/${transaction.id}`)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDelete(transaction.id)}
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button className="btn-add" onClick={() => setShowAddForm(true)}>
+              + Tambah Transaksi
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

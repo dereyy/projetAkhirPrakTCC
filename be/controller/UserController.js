@@ -1,13 +1,16 @@
 import bcrypt from "bcrypt";
 import { User } from "../model/User.js";
-import { generateAccessToken, generateRefreshToken } from "../middleware/Auth.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "../middleware/Auth.js";
 
 export const UserController = {
   register: async (req, res) => {
     try {
       const { name, email, gender, password } = req.body;
       console.log("Register attempt for:", { name, email, gender });
-      
+
       // Cek email sudah terdaftar
       const [existingUser] = await User.findByEmail(email);
       if (existingUser) {
@@ -25,7 +28,7 @@ export const UserController = {
         name,
         email,
         gender,
-        password: hashedPassword
+        password: hashedPassword,
       });
       console.log("User created successfully:", result);
 
@@ -40,19 +43,27 @@ export const UserController = {
     try {
       const { email, password } = req.body;
       console.log("Login attempt for email:", email);
-      
+
+      if (!email || !password) {
+        console.log("Missing email or password");
+        return res.status(400).json({ msg: "Email dan password harus diisi" });
+      }
+
       // Cek user
       const users = await User.findByEmail(email);
       const user = users[0]; // Ambil user pertama dari array
-      
+
       if (!user) {
         console.log("User not found");
         return res.status(404).json({ msg: "User tidak ditemukan" });
       }
 
       console.log("User found:", { id: user.id, email: user.email });
-      console.log("Stored password:", user.password);
-      console.log("Attempting to compare passwords...");
+
+      if (!user.password) {
+        console.log("User has no password set");
+        return res.status(500).json({ msg: "Data user tidak valid" });
+      }
 
       // Cek password
       const match = await bcrypt.compare(password, user.password);
@@ -71,18 +82,21 @@ export const UserController = {
       const accessToken = generateAccessToken({ userId, name, userEmail });
       const refreshToken = generateRefreshToken({ userId, name, userEmail });
 
-      res.cookie('refreshToken', refreshToken, {
+      res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 7 hari
+        maxAge: 24 * 60 * 60 * 1000, // 1 hari
       });
 
       console.log("Login successful");
       res.json({ accessToken });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ 
+      // Log stack trace untuk debugging
+      console.error("Stack trace:", error.stack);
+      res.status(500).json({
         msg: "Terjadi kesalahan saat login",
-        error: error.message 
+        error: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     }
   },
@@ -101,10 +115,10 @@ export const UserController = {
 
   logout: async (req, res) => {
     try {
-      res.clearCookie('refreshToken');
+      res.clearCookie("refreshToken");
       res.json({ msg: "Logout berhasil" });
     } catch (error) {
       res.status(500).json({ msg: error.message });
     }
-  }
-}; 
+  },
+};
