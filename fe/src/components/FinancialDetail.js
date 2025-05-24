@@ -9,6 +9,7 @@ const FinancialDetail = () => {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [timeFilter, setTimeFilter] = useState("day"); // 'day', 'month', 'year'
+  const [typeFilter, setTypeFilter] = useState("all"); // 'all', 'income', 'expense'
   const [summary, setSummary] = useState({
     totalBalance: 0,
     totalIncome: 0,
@@ -23,7 +24,7 @@ const FinancialDetail = () => {
 
   useEffect(() => {
     filterTransactions();
-  }, [transactions, timeFilter, selectedDate]);
+  }, [transactions, timeFilter, selectedDate, typeFilter]);
 
   const fetchTransactions = async () => {
     try {
@@ -32,6 +33,7 @@ const FinancialDetail = () => {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
+      console.log("Data transaksi:", response.data); // Debug log
       setTransactions(response.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -43,23 +45,31 @@ const FinancialDetail = () => {
       const transactionDate = new Date(transaction.date);
       const selected = new Date(selectedDate);
 
+      // Filter berdasarkan tanggal
+      let dateMatch = false;
       switch (timeFilter) {
         case "day":
-          return (
+          dateMatch =
             transactionDate.getDate() === selected.getDate() &&
             transactionDate.getMonth() === selected.getMonth() &&
-            transactionDate.getFullYear() === selected.getFullYear()
-          );
+            transactionDate.getFullYear() === selected.getFullYear();
+          break;
         case "month":
-          return (
+          dateMatch =
             transactionDate.getMonth() === selected.getMonth() &&
-            transactionDate.getFullYear() === selected.getFullYear()
-          );
+            transactionDate.getFullYear() === selected.getFullYear();
+          break;
         case "year":
-          return transactionDate.getFullYear() === selected.getFullYear();
+          dateMatch = transactionDate.getFullYear() === selected.getFullYear();
+          break;
         default:
-          return true;
+          dateMatch = true;
       }
+
+      // Filter berdasarkan jenis transaksi
+      const typeMatch = typeFilter === "all" || transaction.type === typeFilter;
+
+      return dateMatch && typeMatch;
     });
 
     setFilteredTransactions(filtered);
@@ -152,6 +162,27 @@ const FinancialDetail = () => {
     }
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "-";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "-";
+
+      return date.toLocaleString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "-";
+    }
+  };
+
   return (
     <div className="financial-detail-page">
       <div className="container">
@@ -163,34 +194,64 @@ const FinancialDetail = () => {
         </div>
 
         <div className="filter-section">
-          <div className="time-filter">
-            <button
-              className={`filter-btn ${timeFilter === "day" ? "active" : ""}`}
-              onClick={() => handleTimeFilterChange("day")}
-            >
-              Harian
-            </button>
-            <button
-              className={`filter-btn ${timeFilter === "month" ? "active" : ""}`}
-              onClick={() => handleTimeFilterChange("month")}
-            >
-              Bulanan
-            </button>
-            <button
-              className={`filter-btn ${timeFilter === "year" ? "active" : ""}`}
-              onClick={() => handleTimeFilterChange("year")}
-            >
-              Tahunan
-            </button>
+          <div className="filter-row">
+            <div className="time-filter">
+              <button
+                className={`filter-btn ${timeFilter === "day" ? "active" : ""}`}
+                onClick={() => handleTimeFilterChange("day")}
+              >
+                Harian
+              </button>
+              <button
+                className={`filter-btn ${
+                  timeFilter === "month" ? "active" : ""
+                }`}
+                onClick={() => handleTimeFilterChange("month")}
+              >
+                Bulanan
+              </button>
+              <button
+                className={`filter-btn ${
+                  timeFilter === "year" ? "active" : ""
+                }`}
+                onClick={() => handleTimeFilterChange("year")}
+              >
+                Tahunan
+              </button>
+            </div>
+            <div className="date-picker">
+              <input
+                type={getDateInputType()}
+                value={getDateInputValue()}
+                onChange={handleDateChange}
+                min={timeFilter === "year" ? "2000" : undefined}
+                max={timeFilter === "year" ? "2100" : undefined}
+              />
+            </div>
           </div>
-          <div className="date-picker">
-            <input
-              type={getDateInputType()}
-              value={getDateInputValue()}
-              onChange={handleDateChange}
-              min={timeFilter === "year" ? "2000" : undefined}
-              max={timeFilter === "year" ? "2100" : undefined}
-            />
+          <div className="type-filter">
+            <button
+              className={`filter-btn ${typeFilter === "all" ? "active" : ""}`}
+              onClick={() => setTypeFilter("all")}
+            >
+              Semua
+            </button>
+            <button
+              className={`filter-btn ${
+                typeFilter === "income" ? "active" : ""
+              }`}
+              onClick={() => setTypeFilter("income")}
+            >
+              Pemasukan
+            </button>
+            <button
+              className={`filter-btn ${
+                typeFilter === "expense" ? "active" : ""
+              }`}
+              onClick={() => setTypeFilter("expense")}
+            >
+              Pengeluaran
+            </button>
           </div>
         </div>
 
@@ -229,21 +290,51 @@ const FinancialDetail = () => {
               {filteredTransactions.map((transaction) => (
                 <div key={transaction.id} className="transaction-item">
                   <div className="transaction-info">
-                    <span className={`transaction-type ${transaction.type}`}>
+                    <div
+                      className={`transaction-type ${
+                        transaction.type === "income" ? "income" : "expense"
+                      }`}
+                    >
                       {transaction.type === "income"
-                        ? "Pemasukan"
-                        : "Pengeluaran"}
-                    </span>
-                    <div className="transaction-details">
-                      <h4>{transaction.categoryName || "Tanpa Kategori"}</h4>
-                      <p>{transaction.description || "-"}</p>
+                        ? "PEMASUKAN"
+                        : "PENGELUARAN"}
+                    </div>
+                    <div className="transaction-header">
                       <span className="transaction-date">
                         {new Date(transaction.date).toLocaleDateString("id-ID")}
                       </span>
                     </div>
-                  </div>
-                  <div className="transaction-amount">
-                    Rp {Number(transaction.amount).toLocaleString("id-ID")}
+                    <div className="transaction-details">
+                      <div className="detail-row">
+                        <span className="detail-label">Kategori:</span>
+                        <span className="detail-value">
+                          {transaction.categoryName || "Tanpa Kategori"}
+                        </span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Deskripsi:</span>
+                        <span className="detail-value">
+                          {transaction.description || "-"}
+                        </span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Jumlah:</span>
+                        <span className="detail-value amount">
+                          Rp{" "}
+                          {Number(transaction.amount).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">ID Transaksi:</span>
+                        <span className="detail-value">{transaction.id}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Tanggal Dibuat:</span>
+                        <span className="detail-value">
+                          {formatDateTime(transaction.created_at)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
