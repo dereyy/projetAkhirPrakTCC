@@ -19,6 +19,16 @@ export const Transaction = {
     ]);
   },
 
+  getById: async (id, userId) => {
+    const query = `
+      SELECT t.*, c.name as categoryName 
+      FROM transactions t
+      LEFT JOIN categories c ON t.categoryId = c.id
+      WHERE t.id = ? AND t.userId = ?
+    `;
+    return db.query(query, [id, userId]);
+  },
+
   getByUserId: async (userId) => {
     const query = `
       SELECT t.*, c.name as categoryName 

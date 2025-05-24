@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,15 +57,31 @@ const Dashboard = () => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/api/transactions/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
-      fetchTransactions();
-    } catch (error) {
-      console.error("Error deleting transaction:", error);
+    if (window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+      try {
+        await axios.delete(`${API_URL}/api/transactions/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
+        console.log("Transaction deleted successfully:", id);
+        fetchTransactions();
+      } catch (error) {
+        console.error("Error deleting transaction:", error);
+        if (error.response) {
+          console.error("Error response:", error.response.data);
+          alert(
+            `Gagal menghapus transaksi: ${
+              error.response.data.msg || error.message
+            }`
+          );
+        } else if (error.request) {
+          console.error("Request error:", error.request);
+          alert("Gagal menghapus transaksi: Tidak dapat terhubung ke server.");
+        } else {
+          alert(`Gagal menghapus transaksi: ${error.message}`);
+        }
+      }
     }
   };
 
@@ -82,6 +99,8 @@ const Dashboard = () => {
             Logout
           </button>
         </div>
+
+        {error && <div className="error-message">{error}</div>}
 
         {showAddForm ? (
           <AddTransaction onTransactionAdded={handleTransactionAdded} />
