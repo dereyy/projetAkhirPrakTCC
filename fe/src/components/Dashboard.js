@@ -25,6 +25,7 @@ const Dashboard = () => {
         },
       });
       console.log("Transactions response:", response.data);
+      // Assuming the response data is an array of transactions directly
       setTransactions(response.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -41,9 +42,11 @@ const Dashboard = () => {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
+      console.log("Categories response in Dashboard:", response.data);
+      // Assuming the response data is an array of categories directly
       setCategories(response.data);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -61,7 +64,7 @@ const Dashboard = () => {
       });
       fetchTransactions();
     } catch (error) {
-      console.error(error);
+      console.error("Error deleting transaction:", error);
     }
   };
 
@@ -95,28 +98,28 @@ const Dashboard = () => {
                   <div key={transaction.id} className="transaction-card">
                     <span
                       className={`transaction-type ${
-                        transaction.kategori === "pemasukan"
-                          ? "income"
-                          : "expense"
+                        transaction.type === "income" ? "income" : "expense"
                       }`}
                     >
-                      {transaction.kategori}
+                      {transaction.type === "income"
+                        ? "Pemasukan"
+                        : "Pengeluaran"}{" "}
+                      - {transaction.categoryName || "Tanpa Kategori"}
                     </span>
                     <strong>
                       Rp{" "}
-                      {transaction.nominal
-                        ? transaction.nominal.toLocaleString("id-ID")
+                      {transaction.amount !== undefined &&
+                      transaction.amount !== null
+                        ? Number(transaction.amount).toLocaleString("id-ID")
                         : "0"}
                     </strong>
                     <div>
                       Tanggal:{" "}
-                      {transaction.tanggal
-                        ? new Date(transaction.tanggal).toLocaleDateString(
-                            "id-ID"
-                          )
+                      {transaction.date
+                        ? new Date(transaction.date).toLocaleDateString("id-ID")
                         : "-"}
                     </div>
-                    <div>Catatan: {transaction.catatan || "-"}</div>
+                    <div>Deskripsi: {transaction.description || "-"}</div>
                     <div className="transaction-actions">
                       <button
                         className="btn-edit"
