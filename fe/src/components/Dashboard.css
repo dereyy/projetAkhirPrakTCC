@@ -36,6 +36,88 @@
   background-color: #c82333;
 }
 
+.financial-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card h3 {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.summary-card .amount {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+}
+
+.total-balance {
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  color: white;
+}
+
+.total-balance h3,
+.total-balance .amount {
+  color: white;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.income {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+}
+
+.income .amount {
+  color: #2e7d32;
+}
+
+.expense {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.expense .amount {
+  color: #c62828;
+}
+
+.btn-detail {
+  display: block;
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-detail:hover {
+  background-color: #1976d2;
+}
+
 .transaction-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

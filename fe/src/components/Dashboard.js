@@ -11,12 +11,37 @@ const Dashboard = () => {
   const [categories, setCategories] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [error, setError] = useState("");
+  const [summary, setSummary] = useState({
+    totalBalance: 0,
+    totalIncome: 0,
+    totalExpense: 0,
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    calculateSummary();
+  }, [transactions]);
+
+  const calculateSummary = () => {
+    const totalIncome = transactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const totalExpense = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    setSummary({
+      totalBalance: totalIncome - totalExpense,
+      totalIncome,
+      totalExpense,
+    });
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -97,6 +122,32 @@ const Dashboard = () => {
           <h1>Dashboard Keuangan</h1>
           <button id="btnLogout" onClick={handleLogout}>
             Logout
+          </button>
+        </div>
+
+        <div className="financial-summary">
+          <div className="summary-card total-balance">
+            <h3>Total Saldo</h3>
+            <p className="amount">
+              Rp {summary.totalBalance.toLocaleString("id-ID")}
+            </p>
+          </div>
+          <div className="summary-row">
+            <div className="summary-card income">
+              <h3>Total Pemasukan</h3>
+              <p className="amount">
+                Rp {summary.totalIncome.toLocaleString("id-ID")}
+              </p>
+            </div>
+            <div className="summary-card expense">
+              <h3>Total Pengeluaran</h3>
+              <p className="amount">
+                Rp {summary.totalExpense.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+          <button className="btn-detail" onClick={() => navigate("/detail")}>
+            Lihat Detail
           </button>
         </div>
 
