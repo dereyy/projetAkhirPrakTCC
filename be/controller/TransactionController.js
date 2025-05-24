@@ -65,7 +65,9 @@ export const TransactionController = {
         `Attempting to fetch transaction with ID: ${id} for User ID: ${userId}`
       );
 
-      const [transaction] = await Transaction.getById(id, userId);
+      const [transactionResult] = await Transaction.getById(id, userId);
+      // Database query result is an array of rows, get the first row
+      const transaction = transactionResult ? transactionResult[0] : null;
 
       console.log("Raw transaction data from model:", transaction);
 
@@ -76,50 +78,63 @@ export const TransactionController = {
         return res.status(404).json({ msg: "Transaksi tidak ditemukan" });
       }
 
-      // Explicitly construct the response object with correct formatting
-      let formattedDate = null;
-      if (transaction.date) {
-        try {
-          const dateObject = new Date(transaction.date);
-          if (!isNaN(dateObject.getTime())) {
-            formattedDate = dateObject.toISOString().split("T")[0];
-          } else if (
-            typeof transaction.date === "string" &&
-            transaction.date.includes("T")
-          ) {
-            formattedDate = transaction.date.split("T")[0];
-          } else if (typeof transaction.date === "string") {
-            formattedDate = transaction.date;
-          } else {
-            console.warn(
-              "Unexpected date format from model for ID",
-              id,
-              transaction.date
-            );
-          }
-        } catch (e) {
-          console.error(
-            "Error processing date from model for ID",
-            id,
-            transaction.date,
-            e
-          );
-          formattedDate = null;
-        }
-      } else {
-        console.warn("Transaction date is null or undefined for ID", id);
-      }
-
-      const responseTransaction = {
+      // Log specific properties from the raw transaction object
+      console.log("Properties directly from model result:", {
         id: transaction.id,
-        amount: Number(transaction.amount),
-        description: transaction.description || "",
-        date: formattedDate,
+        amount: transaction.amount,
+        date: transaction.date,
         categoryId: transaction.categoryId,
         userId: transaction.userId,
         type: transaction.type,
-        categoryName: transaction.categoryName || null,
+        description: transaction.description,
+        categoryName: transaction.categoryName,
+      });
+
+      // Explicitly construct the response object with all necessary properties
+      // Ensure all expected properties are present, even if null/undefined from DB
+      const responseTransaction = {
+        id: transaction.id || null, // Use null if undefined/null from DB
+        amount: Number(transaction.amount) || 0, // Ensure amount is a number, default to 0
+        description: transaction.description || "", // Default to empty string
+        date: transaction.date || null, // Use null if undefined/null
+        categoryId: transaction.categoryId || null, // Use null if undefined/null
+        userId: transaction.userId || null, // Use null if undefined/null
+        type: transaction.type || null, // Use null if undefined/null
+        categoryName: transaction.categoryName || null, // Use null if undefined/null
       };
+
+      // Format date for the response object (frontend expects YYYY-MM-DD)
+      if (responseTransaction.date) {
+        try {
+          const dateObject = new Date(responseTransaction.date);
+          if (!isNaN(dateObject.getTime())) {
+            responseTransaction.date = dateObject.toISOString().split("T")[0];
+          } else if (
+            typeof responseTransaction.date === "string" &&
+            responseTransaction.date.length >= 10
+          ) {
+            responseTransaction.date = responseTransaction.date.substring(
+              0,
+              10
+            ); // Fallback for string date
+          } else {
+            console.warn(
+              "Unexpected date format during formatting for ID",
+              id,
+              responseTransaction.date
+            );
+            responseTransaction.date = null;
+          }
+        } catch (e) {
+          console.error(
+            "Error formatting date for ID",
+            id,
+            responseTransaction.date,
+            e
+          );
+          responseTransaction.date = null;
+        }
+      }
 
       console.log(
         "Sending explicitly constructed and formatted transaction object:",
@@ -129,6 +144,12 @@ export const TransactionController = {
     } catch (error) {
       console.error(
         `Error fetching transaction by ID ${id} for User ID ${userId}:`,
+        error
+      );
+      const transactionId = req.params.id;
+      const requestUserId = req.user.userId;
+      console.error(
+        `Error fetching transaction by ID ${transactionId} for User ID ${requestUserId}:`,
         error
       );
       res.status(500).json({ msg: error.message });

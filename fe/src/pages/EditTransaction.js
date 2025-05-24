@@ -49,125 +49,107 @@ const EditTransaction = () => {
         },
       });
       console.log("Raw response data:", response.data);
-      console.log("Is response.data an array?", Array.isArray(response.data));
 
       // Ambil data transaksi dari response, handle kasus array
+      // Response dari backend getById seharusnya objek tunggal, tapi ini untuk jaga-jaga
       const transaction = Array.isArray(response.data)
         ? response.data[0]
         : response.data;
 
       console.log("Processed transaction data:", transaction);
-      console.log(
-        "Type of transaction.amount:",
-        typeof transaction.amount,
-        "Value:",
-        transaction.amount
-      );
-      console.log(
-        "Type of transaction.date:",
-        typeof transaction.date,
-        "Value:",
-        transaction.date
-      );
-      console.log(
-        "Type of transaction.categoryId:",
-        typeof transaction.categoryId,
-        "Value:",
-        transaction.categoryId
-      );
-      console.log(
-        "Type of transaction.type:",
-        typeof transaction.type,
-        "Value:",
-        transaction.type
-      );
-      console.log(
-        "Type of transaction.id:",
-        typeof transaction.id,
-        "Value:",
-        transaction.id
-      );
-      console.log(
-        "Type of transaction.description:",
-        typeof transaction.description,
-        "Value:",
-        transaction.description
-      );
-      console.log(
-        "Type of transaction.categoryName:",
-        typeof transaction.categoryName,
-        "Value:",
-        transaction.categoryName
-      );
 
-      // --- Validasi Struktur Data --- //
-      if (
-        !transaction ||
-        typeof transaction !== "object" ||
-        !transaction.id ||
-        typeof transaction.amount === "undefined" ||
-        typeof transaction.date === "undefined" ||
-        typeof transaction.categoryId === "undefined" ||
-        typeof transaction.type === "undefined"
-      ) {
+      // --- Validasi Dasar Data yang Diterima --- //
+      // Memastikan data transaksi adalah objek yang valid sebelum mencoba mengakses propertinya
+      if (!transaction || typeof transaction !== "object") {
         console.error(
-          "Invalid transaction data structure received:",
+          "Invalid or empty transaction data structure received:",
           transaction
         );
-        setError("Gagal memuat data transaksi: Struktur data tidak valid.");
+        setError(
+          "Gagal memuat data transaksi: Struktur data tidak valid atau kosong."
+        );
         setLoading(false);
-        return; // Hentikan proses jika data tidak valid
+        return;
       }
-      // ----------------------------- //
+      // ------------------------------------- //
 
-      // Format tanggal agar sesuai dengan input type="date"
-      // Pastikan transaction.date adalah string atau Date object yang valid
+      // Log detail properti data transaksi yang diterima
+      console.log("Transaction data properties received:", {
+        id: transaction.id,
+        amount: transaction.amount,
+        date: transaction.date,
+        categoryId: transaction.categoryId,
+        type: transaction.type,
+        description: transaction.description,
+        categoryName: transaction.categoryName, // Log juga categoryName jika ada
+      });
+
+      // Format tanggal agar sesuai dengan input type="date" (YYYY-MM-DD)
       let formattedDate = "";
       if (transaction.date) {
         try {
-          // Coba buat Date object lalu format
-          const dateObj = new Date(transaction.date);
-          if (!isNaN(dateObj.getTime())) {
-            formattedDate = dateObj.toISOString().split("T")[0];
+          // Coba parsing tanggal menggunakan Date object
+          const dateObject = new Date(transaction.date);
+          if (!isNaN(dateObject.getTime())) {
+            formattedDate = dateObject.toISOString().split("T")[0];
           } else if (
             typeof transaction.date === "string" &&
-            transaction.date.includes("T")
+            transaction.date.length >= 10
           ) {
-            // Jika gagal, coba langsung split string jika formatnya ISO
-            formattedDate = transaction.date.split("T")[0];
-          } else if (typeof transaction.date === "string") {
-            // Jika hanya tanggal YYYY-MM-DD
-            formattedDate = transaction.date;
+            // Jika Date object gagal, coba ambil 10 karakter pertama jika berupa string (asumsi format YYYY-MM-DD...)
+            formattedDate = transaction.date.substring(0, 10);
+            console.warn(
+              "Date parsing with Date object failed, using substring:",
+              transaction.date,
+              "->",
+              formattedDate
+            );
           } else {
-            console.warn("Unexpected date format:", transaction.date);
+            console.warn(
+              "Unexpected date format from backend:",
+              transaction.date
+            );
           }
         } catch (e) {
-          console.error("Error processing date format:", transaction.date, e);
+          console.error(
+            "Error processing date from backend:",
+            transaction.date,
+            e
+          );
+          formattedDate = ""; // Set kosong jika ada error
         }
+      } else {
+        console.warn("Transaction date is null or undefined for ID", id);
       }
-      console.log("Formatted date for form:", formattedDate);
+      console.log("Formatted date for form input:", formattedDate);
 
+      // Siapkan data untuk form state, berikan nilai default jika properti hilang atau null/undefined
       const newFormData = {
         amount:
-          transaction.amount !== undefined && transaction.amount !== null
-            ? transaction.amount
-            : "",
-        description: transaction.description || "",
-        date: formattedDate,
+          transaction.amount !== null && transaction.amount !== undefined
+            ? Number(transaction.amount)
+            : "", // Gunakan '' untuk input number kosong
+        description: transaction.description || "", // Default string kosong
+        date: formattedDate, // Gunakan tanggal yang sudah diformat
         categoryId:
-          transaction.categoryId !== undefined &&
-          transaction.categoryId !== null
-            ? transaction.categoryId
-            : "",
-        type: transaction.type || "",
+          transaction.categoryId !== null &&
+          transaction.categoryId !== undefined
+            ? String(transaction.categoryId)
+            : "", // Default string kosong
+        type: transaction.type || "", // Default string kosong
       };
 
-      console.log("Attempting to set formData with:", newFormData); // <<< Log ini
-      setFormData(newFormData); // <<< Panggil setFormData
-      console.log("setFormData called with:", newFormData); // <<< Log nilai yang disetel
+      console.log("Setting form data with values:", newFormData);
+      setFormData(newFormData);
 
-      setTransactionLoaded(true); // Data berhasil dimuat
-      setFormKey((prevKey) => prevKey + 1); // Perbarui key form untuk memaksa re-render
+      // Log state formData setelah diset (meskipun async)
+      console.log(
+        "formData state after set (may be slightly delayed):",
+        newFormData
+      );
+
+      setTransactionLoaded(true);
+      setFormKey((prevKey) => prevKey + 1); // Perbarui key form untuk memaksa re-render dengan data baru
     } catch (err) {
       console.error("Error fetching transaction data:", err);
       // Menangani error response dari backend
