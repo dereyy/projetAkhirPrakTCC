@@ -10,6 +10,8 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import EditTransaction from "./pages/EditTransaction";
+import FinancialDetail from "./components/FinancialDetail";
+import "./App.css";
 
 function App() {
   const [isApiConnected, setIsApiConnected] = useState(false);
@@ -45,7 +47,8 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/edit/:id" element={<EditTransaction />} />
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/detail" element={<FinancialDetail />} />
+        <Route path="/" element={<Login />} />
       </Routes>
     </Router>
   );
