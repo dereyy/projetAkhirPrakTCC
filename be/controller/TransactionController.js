@@ -3,36 +3,43 @@ import { Transaction } from "../model/Transaction.js";
 export const TransactionController = {
   create: async (req, res) => {
     try {
-      const { nominal, kategori, tanggal, catatan } = req.body;
-      const user_id = req.user.userId;
+      const { amount, categoryId, date, description, type } = req.body;
+      const userId = req.user.userId;
+
+      console.log("Received transaction data:", req.body);
 
       // Validasi data
-      if (!nominal || nominal <= 0) {
+      if (!amount || amount <= 0) {
         return res.status(400).json({ msg: "Nominal harus lebih dari 0" });
       }
 
-      if (!kategori || !["pemasukan", "pengeluaran"].includes(kategori)) {
-        return res
-          .status(400)
-          .json({ msg: "Kategori harus pemasukan atau pengeluaran" });
+      if (!categoryId) {
+        return res.status(400).json({ msg: "Kategori harus dipilih" });
       }
 
-      if (!tanggal) {
+      if (!date) {
         return res.status(400).json({ msg: "Tanggal harus diisi" });
       }
 
+      if (!type || !["income", "expense"].includes(type)) {
+        return res
+          .status(400)
+          .json({ msg: "Tipe transaksi harus income atau expense" });
+      }
+
       // Validasi format tanggal
-      const dateObj = new Date(tanggal);
+      const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) {
         return res.status(400).json({ msg: "Format tanggal tidak valid" });
       }
 
       const result = await Transaction.create({
-        user_id,
-        nominal: Number(nominal),
-        kategori,
-        tanggal,
-        catatan: catatan || "",
+        userId,
+        amount: Number(amount),
+        categoryId,
+        date,
+        description: description || "",
+        type,
       });
 
       console.log("Transaction created:", result);
@@ -45,14 +52,14 @@ export const TransactionController = {
 
   getAll: async (req, res) => {
     try {
-      const user_id = req.user.userId;
-      const [transactions] = await Transaction.getByUserId(user_id);
+      const userId = req.user.userId;
+      const [transactions] = await Transaction.getByUserId(userId);
 
       // Format data sebelum dikirim ke client
       const formattedTransactions = transactions.map((transaction) => ({
         ...transaction,
-        nominal: Number(transaction.nominal),
-        tanggal: transaction.tanggal.toISOString().split("T")[0],
+        amount: Number(transaction.amount),
+        date: transaction.date.toISOString().split("T")[0],
       }));
 
       console.log("Sending transactions:", formattedTransactions);
@@ -66,7 +73,7 @@ export const TransactionController = {
   getByDateRange: async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
-      const user_id = req.user.userId;
+      const userId = req.user.userId;
 
       if (!startDate || !endDate) {
         return res
@@ -75,7 +82,7 @@ export const TransactionController = {
       }
 
       const [transactions] = await Transaction.getByDateRange(
-        user_id,
+        userId,
         startDate,
         endDate
       );
@@ -83,8 +90,8 @@ export const TransactionController = {
       // Format data sebelum dikirim ke client
       const formattedTransactions = transactions.map((transaction) => ({
         ...transaction,
-        nominal: Number(transaction.nominal),
-        tanggal: transaction.tanggal.toISOString().split("T")[0],
+        amount: Number(transaction.amount),
+        date: transaction.date.toISOString().split("T")[0],
       }));
 
       res.json(formattedTransactions);
@@ -97,14 +104,15 @@ export const TransactionController = {
   update: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nominal, kategori, tanggal, catatan } = req.body;
-      const user_id = req.user.userId;
+      const { amount, categoryId, date, description, type } = req.body;
+      const userId = req.user.userId;
 
-      await Transaction.update(id, user_id, {
-        nominal,
-        kategori,
-        tanggal,
-        catatan,
+      await Transaction.update(id, userId, {
+        amount,
+        categoryId,
+        date,
+        description,
+        type,
       });
 
       res.json({ msg: "Transaksi berhasil diupdate" });
@@ -116,9 +124,9 @@ export const TransactionController = {
   delete: async (req, res) => {
     try {
       const { id } = req.params;
-      const user_id = req.user.userId;
+      const userId = req.user.userId;
 
-      await Transaction.delete(id, user_id);
+      await Transaction.delete(id, userId);
       res.json({ msg: "Transaksi berhasil dihapus" });
     } catch (error) {
       console.error("Error deleting transaction:", error);

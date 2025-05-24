@@ -5,10 +5,11 @@ import "./Transaction.css";
 
 const AddTransaction = ({ onTransactionAdded }) => {
   const [formData, setFormData] = useState({
-    nominal: "",
-    kategori: "",
-    tanggal: new Date().toISOString().split("T")[0],
-    catatan: "",
+    amount: "",
+    description: "",
+    date: new Date().toISOString().split("T")[0],
+    categoryId: "",
+    type: "expense", // default value
   });
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
@@ -21,15 +22,37 @@ const AddTransaction = ({ onTransactionAdded }) => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("Token tidak ditemukan");
+      }
+
       const response = await axios.get(`${config.API_URL}/api/categories`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setCategories(response.data);
+
+      console.log("Categories response:", response.data);
+
+      if (Array.isArray(response.data)) {
+        setCategories(response.data);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        setCategories(response.data.data);
+      } else {
+        console.error("Format data kategori tidak valid:", response.data);
+        setError("Format data kategori tidak valid");
+      }
     } catch (err) {
       console.error("Error fetching categories:", err);
-      setError("Gagal memuat kategori");
+      if (err.response) {
+        console.error("Response error:", err.response.data);
+        setError(err.response.data.msg || "Gagal memuat kategori");
+      } else if (err.request) {
+        console.error("Request error:", err.request);
+        setError("Tidak dapat terhubung ke server");
+      } else {
+        setError("Gagal memuat kategori");
+      }
     }
   };
 
@@ -52,9 +75,15 @@ const AddTransaction = ({ onTransactionAdded }) => {
         throw new Error("Token tidak ditemukan");
       }
 
+      // Konversi amount ke number
+      const transactionData = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+      };
+
       const response = await axios.post(
         `${config.API_URL}/api/transactions`,
-        formData,
+        transactionData,
         {
           headers: {
             "Content-Type": "application/json",
@@ -67,10 +96,11 @@ const AddTransaction = ({ onTransactionAdded }) => {
 
       // Reset form
       setFormData({
-        nominal: "",
-        kategori: "",
-        tanggal: new Date().toISOString().split("T")[0],
-        catatan: "",
+        amount: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0],
+        categoryId: "",
+        type: "expense",
       });
 
       // Notify parent component
@@ -94,57 +124,73 @@ const AddTransaction = ({ onTransactionAdded }) => {
 
       <form onSubmit={handleSubmit} className="transaction-form">
         <div className="form-group">
-          <label htmlFor="nominal">Nominal (Rp)</label>
+          <label htmlFor="type">Jenis Transaksi</label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            required
+          >
+            <option value="income">Pemasukan</option>
+            <option value="expense">Pengeluaran</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="amount">Nominal (Rp)</label>
           <input
             type="number"
-            id="nominal"
-            name="nominal"
-            value={formData.nominal}
+            id="amount"
+            name="amount"
+            value={formData.amount}
             onChange={handleChange}
             required
             min="0"
+            step="0.01"
             placeholder="Masukkan nominal"
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="kategori">Kategori</label>
+          <label htmlFor="categoryId">Kategori</label>
           <select
-            id="kategori"
-            name="kategori"
-            value={formData.kategori}
+            id="categoryId"
+            name="categoryId"
+            value={formData.categoryId}
             onChange={handleChange}
             required
           >
             <option value="">Pilih Kategori</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.nama_kategori}>
-                {category.nama_kategori}
-              </option>
-            ))}
+            {Array.isArray(categories) &&
+              categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
           </select>
         </div>
 
         <div className="form-group">
-          <label htmlFor="tanggal">Tanggal</label>
+          <label htmlFor="date">Tanggal</label>
           <input
             type="date"
-            id="tanggal"
-            name="tanggal"
-            value={formData.tanggal}
+            id="date"
+            name="date"
+            value={formData.date}
             onChange={handleChange}
             required
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="catatan">Catatan</label>
+          <label htmlFor="description">Deskripsi</label>
           <textarea
-            id="catatan"
-            name="catatan"
-            value={formData.catatan}
+            id="description"
+            name="description"
+            value={formData.description}
             onChange={handleChange}
-            placeholder="Tambahkan catatan (opsional)"
+            placeholder="Tambahkan deskripsi transaksi (opsional)"
             rows="3"
           />
         </div>
