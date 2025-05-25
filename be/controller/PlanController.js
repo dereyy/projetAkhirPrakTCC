@@ -264,4 +264,46 @@ export const PlanController = {
       throw error;
     }
   },
+
+  // Fungsi untuk menghitung ulang remainingAmount untuk plan berdasarkan kategori dan userId
+  async recalculateForPlanByCategory(userId, categoryId) {
+    try {
+      const plan = await Plan.findOne({
+        where: { userId, categoryId },
+      });
+
+      if (!plan) {
+        // console.log(`No plan found for userId: ${userId}, categoryId: ${categoryId}. Skipping recalculation.`);
+        return;
+      }
+
+      const transactions = await Transaction.findAll({
+        where: {
+          userId,
+          categoryId,
+          type: "expense",
+        },
+        attributes: ["amount"],
+      });
+
+      const totalExpenses = transactions.reduce(
+        (sum, t) => sum + parseFloat(t.amount),
+        0
+      );
+
+      const newRemainingAmount = plan.amount - totalExpenses;
+      await plan.update({
+        remainingAmount: Math.max(0, newRemainingAmount),
+      });
+      console.log(
+        `Recalculated remaining amount for plan ${plan.id} (category ${categoryId}): ${newRemainingAmount}`
+      );
+    } catch (error) {
+      console.error(
+        `Error recalculating remaining amount for category ${categoryId}, user ${userId}:`,
+        error
+      );
+      // Tidak melempar error agar tidak mengganggu operasi utama (create/update/delete transaction)
+    }
+  },
 };

@@ -57,17 +57,19 @@ export const TransactionController = {
       // Get category name
       const category = await Category.findByPk(categoryId);
 
-      // Jika transaksi adalah pengeluaran, update remainingAmount di plans
+      // Jika transaksi adalah pengeluaran, hitung ulang remainingAmount untuk plan terkait
       if (type === "expense") {
         try {
-          await PlanController.updateRemainingAmount(transaction);
+          await PlanController.recalculateForPlanByCategory(userId, categoryId);
           console.log(
-            "Updated remaining amount for transaction:",
-            transaction.id
+            `Recalculated plan for category ${categoryId} after new transaction ${transaction.id}`
           );
-        } catch (error) {
-          console.error("Error updating plan remaining amount:", error);
-          // Tidak mengembalikan error karena transaksi sudah berhasil dibuat
+        } catch (recalcError) {
+          console.error(
+            `Error recalculating plan for category ${categoryId} after new transaction:`,
+            recalcError
+          );
+          // Lanjutkan meskipun recalculate gagal, karena transaksi utama sudah berhasil
         }
       }
 
@@ -216,16 +218,89 @@ export const TransactionController = {
         });
       }
 
+      const oldCategoryId = transaction.categoryId;
+      const oldType = transaction.type;
+
       await transaction.update({
         amount,
-        categoryId,
+        categoryId, // categoryId baru
         date,
         description,
-        type,
+        type, // type baru
       });
 
-      // Get category name
-      const category = await Category.findByPk(categoryId);
+      // Logika untuk recalculate plan(s)
+      // 1. Jika kategori lama adalah bagian dari plan dan transaksi lama adalah expense, recalculate plan lama.
+      if (oldType === "expense") {
+        try {
+          await PlanController.recalculateForPlanByCategory(userId, oldCategoryId);
+          console.log(
+            `Recalculated plan for old category ${oldCategoryId} after transaction update ${transaction.id}`
+          );
+        } catch (recalcError) {
+          console.error(
+            `Error recalculating plan for old category ${oldCategoryId} after transaction update:`,
+            recalcError
+          );
+        }
+      }
+
+      // 2. Jika kategori baru (atau sama) adalah bagian dari plan dan transaksi baru adalah expense, recalculate plan baru.
+      // Ini juga menangani kasus jika kategori tidak berubah tapi amount/type berubah.
+      if (type === "expense") { // type baru
+        // Jika kategori berubah dan kategori baru berbeda dari lama, atau jika kategori sama.
+        // Kondisi oldCategoryId !== categoryId sudah implisit ditangani jika oldType bukan expense atau type baru bukan expense.
+        // Cukup panggil untuk categoryId baru jika type baru adalah expense.
+        // Jika oldCategoryId sama dengan categoryId baru, ini akan dipanggil sekali, yang benar.
+        // Jika oldCategoryId berbeda dan oldType expense, plan lama sudah di-recalculate.
+        // Sekarang recalculate plan baru jika type baru adalah expense.
+        if (oldCategoryId !== categoryId && oldType === "expense") {
+          // Jika kategori berubah DAN tipe lama adalah expense, plan lama sudah dihitung.
+          // Sekarang hitung plan baru jika tipe baru adalah expense.
+           try {
+            await PlanController.recalculateForPlanByCategory(userId, categoryId); // categoryId baru
+            console.log(
+              `Recalculated plan for new category ${categoryId} after transaction update ${transaction.id}`
+            );
+          } catch (recalcError) {
+            console.error(
+              `Error recalculating plan for new category ${categoryId} after transaction update:`,
+              recalcError
+            );
+          }
+        } else if (oldCategoryId === categoryId) {
+          // Jika kategori tidak berubah, cukup recalculate sekali untuk kategori tersebut
+          // (jika tipe lama atau baru adalah expense, ini akan mengcovernya)
+           try {
+            await PlanController.recalculateForPlanByCategory(userId, categoryId);
+            console.log(
+              `Recalculated plan for category ${categoryId} (no change or type/amount change) after transaction update ${transaction.id}`
+            );
+          } catch (recalcError) {
+            console.error(
+              `Error recalculating plan for category ${categoryId} (no change or type/amount change) after transaction update:`,
+              recalcError
+            );
+          }
+        } else if (type === "expense" && oldType !== 'expense') {
+            // Kategori berubah, tipe lama bukan expense, tipe baru expense
+             try {
+                await PlanController.recalculateForPlanByCategory(userId, categoryId); // categoryId baru
+                console.log(
+                `Recalculated plan for new category ${categoryId} (was not expense, now is) after transaction update ${transaction.id}`
+                );
+            } catch (recalcError) {
+                console.error(
+                `Error recalculating plan for new category ${categoryId} (was not expense, now is) after transaction update:`,
+                recalcError
+                );
+            }
+        }
+      }
+
+
+      // Get category name for response
+      const category = await Category.findByPk(categoryId); // categoryId baru
 
       res.json({
         status: "success",
@@ -260,7 +335,25 @@ export const TransactionController = {
         });
       }
 
+      const categoryIdToRecalculate = transaction.categoryId;
+      const typeOfDeletedTransaction = transaction.type;
+
       await transaction.destroy();
+
+      // Jika transaksi yang dihapus adalah pengeluaran, recalculate plan terkait
+      if (typeOfDeletedTransaction === "expense") {
+        try {
+          await PlanController.recalculateForPlanByCategory(userId, categoryIdToRecalculate);
+          console.log(
+            `Recalculated plan for category ${categoryIdToRecalculate} after transaction delete ${id}`
+          );
+        } catch (recalcError) {
+          console.error(
+            `Error recalculating plan for category ${categoryIdToRecalculate} after transaction delete:`,
+            recalcError
+          );
+        }
+      }
 
       res.json({
         status: "success",

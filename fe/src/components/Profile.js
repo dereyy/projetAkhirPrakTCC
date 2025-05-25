@@ -240,23 +240,32 @@ const Profile = () => {
         });
 
         if (response.data.status === "success") {
+          alert(response.data.message || "Akun berhasil dihapus."); // Tampilkan pesan sukses
           localStorage.removeItem("accessToken");
           navigate("/login");
         } else {
-          throw new Error(response.data.message || "Gagal menghapus akun");
+          // Ini kemungkinan tidak akan tercapai jika backend mengembalikan status error (non-2xx)
+          const errorMessage = response.data.message || "Gagal menghapus akun.";
+          setError(errorMessage);
+          alert(errorMessage); // Tampilkan pesan gagal dari respons non-error status
+          throw new Error(errorMessage);
         }
       } catch (error) {
         console.error("Error deleting account:", error);
-        if (error.response) {
-          setError(
-            error.response.data.message ||
-              "Gagal menghapus akun. Silakan coba lagi."
-          );
+        let errorMessageForAlert = "Terjadi kesalahan. Silakan coba lagi.";
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessageForAlert = error.response.data.message;
+          setError(errorMessageForAlert);
+        } else if (error.response) {
+          errorMessageForAlert = "Gagal menghapus akun dari server. Silakan coba lagi.";
+          setError(errorMessageForAlert);
         } else if (error.request) {
-          setError("Tidak dapat terhubung ke server. Silakan coba lagi.");
+          errorMessageForAlert = "Tidak dapat terhubung ke server. Silakan coba lagi.";
+          setError(errorMessageForAlert);
         } else {
-          setError("Terjadi kesalahan. Silakan coba lagi.");
+          setError(errorMessageForAlert);
         }
+        alert(errorMessageForAlert); // Tampilkan pesan error
       }
     }
   };

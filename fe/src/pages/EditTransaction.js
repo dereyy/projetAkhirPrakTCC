@@ -43,18 +43,18 @@ const EditTransaction = () => {
       if (!token) {
         throw new Error("Token tidak ditemukan");
       }
-      const response = await axios.get(`${API_URL}/api/transactions/${id}`, {
+      const response = await axios.get(`${API_URL}/api/transaction/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       console.log("Raw response data:", response.data);
 
-      // Ambil data transaksi dari response, handle kasus array
-      // Response dari backend getById seharusnya objek tunggal, tapi ini untuk jaga-jaga
-      const transaction = Array.isArray(response.data)
-        ? response.data[0]
-        : response.data;
+      // Ambil data transaksi dari response.data.data
+      // Asumsi backend mengembalikan objek transaksi di dalam properti 'data'
+      const transaction = response.data && response.data.data 
+        ? response.data.data 
+        : response.data; // Fallback jika tidak ada .data atau struktur berbeda
 
       console.log("Processed transaction data:", transaction);
 
@@ -174,7 +174,7 @@ const EditTransaction = () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return; // Jangan fetch jika tidak ada token
-      const response = await axios.get(`${API_URL}/api/categories`, {
+      const response = await axios.get(`${API_URL}/api/category`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -229,7 +229,7 @@ const EditTransaction = () => {
         amount: parseFloat(formData.amount),
       };
 
-      await axios.put(`${API_URL}/api/transactions/${id}`, transactionData, {
+      await axios.put(`${API_URL}/api/transaction/${id}`, transactionData, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
