@@ -11,6 +11,7 @@ import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import EditTransaction from "./pages/EditTransaction";
 import FinancialDetail from "./components/FinancialDetail";
+import FinancialPlanning from "./components/FinancialPlanning";
 import "./App.css";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/edit/:id" element={<EditTransaction />} />
         <Route path="/detail" element={<FinancialDetail />} />
+        <Route path="/planning" element={<FinancialPlanning />} />
         <Route path="/" element={<Login />} />
       </Routes>
     </Router>

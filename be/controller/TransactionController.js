@@ -1,4 +1,8 @@
 import { Transaction } from "../model/Transaction.js";
+import {
+  getPlanByCategoryAndUser,
+  updateRemainingAmount,
+} from "../model/PlanModel.js";
 
 export const TransactionController = {
   create: async (req, res) => {
@@ -38,6 +42,7 @@ export const TransactionController = {
         return res.status(400).json({ msg: "Format tanggal tidak valid" });
       }
 
+      // Buat transaksi
       const result = await Transaction.create({
         userId,
         amount: Number(amount),
@@ -46,6 +51,24 @@ export const TransactionController = {
         description: description || "",
         type,
       });
+
+      // Jika transaksi adalah pengeluaran, update remainingAmount di plans
+      if (type === "expense") {
+        try {
+          // Cari plan yang sesuai dengan kategori dan user
+          const [plans] = await getPlanByCategoryAndUser(categoryId, userId);
+
+          if (plans && plans.length > 0) {
+            const plan = plans[0];
+            // Update remainingAmount
+            await updateRemainingAmount(plan.id, Number(amount));
+            console.log("Updated remaining amount for plan:", plan.id);
+          }
+        } catch (error) {
+          console.error("Error updating plan remaining amount:", error);
+          // Tidak mengembalikan error karena transaksi sudah berhasil dibuat
+        }
+      }
 
       console.log("Transaction created successfully:", result);
       res.status(201).json({ msg: "Transaksi berhasil ditambahkan" });
