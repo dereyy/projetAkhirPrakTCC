@@ -6,6 +6,10 @@ import {
 } from "../middleware/Auth.js";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const UserController = {
   register: async (req, res) => {
@@ -129,16 +133,16 @@ export const UserController = {
       const [user] = await User.findById(req.user.userId);
       if (!user || !user.foto_profil) {
         // Jika user tidak memiliki foto profil, kirim default profile
-        return res.status(404).json({ 
+        return res.status(404).json({
           msg: "Foto profil tidak ditemukan",
-          useDefault: true 
+          useDefault: true,
         });
       }
 
       // Send the photo buffer
       res.writeHead(200, {
-        'Content-Type': 'image/jpeg',
-        'Content-Length': user.foto_profil.length
+        "Content-Type": "image/jpeg",
+        "Content-Length": user.foto_profil.length,
       });
       res.end(user.foto_profil);
     } catch (error) {
@@ -195,11 +199,24 @@ export const UserController = {
       const [updatedUser] = await User.findById(userId);
       res.json({
         msg: "Profile berhasil diupdate",
-        user: updatedUser
+        user: updatedUser,
       });
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ msg: error.message });
     }
-  }
+  },
+
+  getProfile: async (req, res) => {
+    try {
+      const [user] = await User.findById(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ msg: "User tidak ditemukan" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error getting profile:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
 };

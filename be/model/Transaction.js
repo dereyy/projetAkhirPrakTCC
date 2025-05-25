@@ -73,4 +73,17 @@ export const Transaction = {
     const query = "DELETE FROM transactions WHERE id = ? AND userId = ?";
     return db.query(query, [id, userId]);
   },
+
+  deleteByUserId: async (userId) => {
+    try {
+      console.log("Deleting transactions for user:", userId);
+      const query = "DELETE FROM transactions WHERE userId = ?";
+      const [result] = await db.query(query, [userId]);
+      console.log("Transaction deletion result:", result);
+      return [result];
+    } catch (error) {
+      console.error("Error in Transaction.deleteByUserId:", error);
+      throw error;
+    }
+  },
 };

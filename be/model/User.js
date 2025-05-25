@@ -33,7 +33,8 @@ export const User = {
   findById: async (id) => {
     try {
       console.log("Finding user by id:", id);
-      const query = "SELECT id, name, email, gender, foto_profil FROM users WHERE id = ?";
+      const query =
+        "SELECT id, name, email, gender, foto_profil FROM users WHERE id = ?";
       const [rows] = await db.query(query, [id]);
       console.log("Find by id result:", rows);
       return rows;
@@ -50,9 +51,9 @@ export const User = {
 
       // Build the SET clause dynamically based on provided fields
       const setClause = Object.keys(updateData)
-        .map(key => `${key} = ?`)
+        .map((key) => `${key} = ?`)
         .join(", ");
-      
+
       const query = `UPDATE users SET ${setClause} WHERE id = ?`;
       const values = [...Object.values(updateData), id];
 
@@ -63,5 +64,18 @@ export const User = {
       console.error("Error in User.update:", error);
       throw error;
     }
-  }
+  },
+
+  delete: async (id) => {
+    try {
+      console.log("Deleting user with id:", id);
+      const query = "DELETE FROM users WHERE id = ?";
+      const [result] = await db.query(query, [id]);
+      console.log("User deletion result:", result);
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error("Error in User.delete:", error);
+      throw error;
+    }
+  },
 };

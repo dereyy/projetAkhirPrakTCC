@@ -6,14 +6,15 @@ import axios from "axios";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_WIDTH = 800; // Maximum width for compressed image
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    gender: '',
-    foto_profil: null
+    name: "",
+    email: "",
+    gender: "",
+    foto_profil: null,
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [error, setError] = useState("");
@@ -37,18 +38,21 @@ const Profile = () => {
       setFormData({
         name: data.name,
         email: data.email,
-        gender: data.gender || '',
-        foto_profil: null
+        gender: data.gender || "",
+        foto_profil: null,
       });
-      
+
       // Fetch profile photo
       try {
-        const photoResponse = await axios.get('http://localhost:5001/api/user/profile/photo', {
-          responseType: 'blob',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const photoResponse = await axios.get(
+          "http://localhost:5001/api/user/profile/photo",
+          {
+            responseType: "blob",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
         const imageUrl = URL.createObjectURL(photoResponse.data);
         setPreviewImage(imageUrl);
       } catch (error) {
@@ -63,9 +67,9 @@ const Profile = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -77,29 +81,35 @@ const Profile = () => {
         const img = new Image();
         img.src = event.target.result;
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           let width = img.width;
           let height = img.height;
-          
+
           // Calculate new dimensions
           if (width > MAX_WIDTH) {
             height = Math.round((height * MAX_WIDTH) / width);
             width = MAX_WIDTH;
           }
-          
+
           canvas.width = width;
           canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
+
+          const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
-          
+
           // Convert to blob with reduced quality
-          canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            }));
-          }, 'image/jpeg', 0.7); // 70% quality
+          canvas.toBlob(
+            (blob) => {
+              resolve(
+                new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                })
+              );
+            },
+            "image/jpeg",
+            0.7
+          ); // 70% quality
         };
         img.onerror = reject;
       };
@@ -114,12 +124,12 @@ const Profile = () => {
         setError("Ukuran file terlalu besar. Maksimal 2MB.");
         return;
       }
-      
+
       try {
         const compressedFile = await compressImage(file);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          foto_profil: compressedFile
+          foto_profil: compressedFile,
         }));
         setPreviewImage(URL.createObjectURL(compressedFile));
       } catch (error) {
@@ -137,64 +147,107 @@ const Profile = () => {
 
     const formDataToSend = new FormData();
     if (formData.name !== user.name) {
-      formDataToSend.append('name', formData.name);
+      formDataToSend.append("name", formData.name);
     }
     if (formData.email !== user.email) {
-      formDataToSend.append('email', formData.email);
+      formDataToSend.append("email", formData.email);
     }
     if (formData.gender !== user.gender) {
-      formDataToSend.append('gender', formData.gender);
+      formDataToSend.append("gender", formData.gender);
     }
     if (formData.foto_profil) {
-      formDataToSend.append('foto_profil', formData.foto_profil);
+      formDataToSend.append("foto_profil", formData.foto_profil);
     }
 
     try {
-      const response = await axios.put("http://localhost:5001/api/user/profile", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
-      setUser(response.data);
-      
-      // Refresh profile photo after update
-      try {
-        const photoResponse = await axios.get('http://localhost:5001/api/user/profile/photo', {
-          responseType: 'blob',
+      const response = await axios.put(
+        "http://localhost:5001/api/user/profile",
+        formDataToSend,
+        {
           headers: {
+            "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        });
+        }
+      );
+      setUser(response.data);
+
+      // Refresh profile photo after update
+      try {
+        const photoResponse = await axios.get(
+          "http://localhost:5001/api/user/profile/photo",
+          {
+            responseType: "blob",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
         const imageUrl = URL.createObjectURL(photoResponse.data);
         setPreviewImage(imageUrl);
       } catch (error) {
         console.log("No profile photo found, using default");
         setPreviewImage(defaultProfile);
       }
-      
+
       setSuccess("Profil berhasil diperbarui");
     } catch (error) {
       console.error("Error updating profile:", error);
-      setError(error.response?.data?.msg || "Terjadi kesalahan saat memperbarui profil");
+      setError(
+        error.response?.data?.msg || "Terjadi kesalahan saat memperbarui profil"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.")) {
+    if (
+      window.confirm(
+        "Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan."
+      )
+    ) {
       try {
-        await axios.delete("http://localhost:5001/api/user", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        localStorage.removeItem("accessToken");
-        navigate("/login");
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          throw new Error("Token tidak ditemukan");
+        }
+
+        // Hapus akun user
+        const response = await axios.delete(
+          "http://localhost:5001/api/user/delete",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.status === "success") {
+          // Hapus token dan redirect ke login
+          localStorage.removeItem("accessToken");
+          navigate("/login");
+        } else {
+          throw new Error(response.data.message || "Gagal menghapus akun");
+        }
       } catch (error) {
         console.error("Error deleting account:", error);
-        setError(error.response?.data?.msg || "Gagal menghapus akun. Silakan coba lagi.");
+        if (error.response) {
+          // Server merespons dengan status error
+          console.error("Error response:", error.response.data);
+          setError(
+            error.response.data.message ||
+              "Gagal menghapus akun. Silakan coba lagi."
+          );
+        } else if (error.request) {
+          // Request dibuat tapi tidak ada response
+          console.error("No response received:", error.request);
+          setError("Tidak dapat terhubung ke server. Silakan coba lagi.");
+        } else {
+          // Error saat setup request
+          console.error("Error message:", error.message);
+          setError("Terjadi kesalahan. Silakan coba lagi.");
+        }
       }
     }
   };
@@ -206,10 +259,17 @@ const Profile = () => {
   return (
     <div className="profile-container">
       <div className="profile-card">
-        <div className="profile-image-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img 
-            src={previewImage || defaultProfile} 
-            alt="Profile" 
+        <div
+          className="profile-image-container"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <img
+            src={previewImage || defaultProfile}
+            alt="Profile"
             className="profile-image"
             onError={(e) => {
               e.target.onerror = null;
@@ -226,13 +286,17 @@ const Profile = () => {
               name="foto_profil"
               accept="image/*"
               onChange={handleImageChange}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
             />
           </div>
         </div>
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
-        <form onSubmit={handleSubmit} className="profile-form" style={{ marginTop: '2rem' }}>
+        <form
+          onSubmit={handleSubmit}
+          className="profile-form"
+          style={{ marginTop: "2rem" }}
+        >
           <div className="form-group">
             <label>Nama</label>
             <input
@@ -266,13 +330,21 @@ const Profile = () => {
             </select>
           </div>
           <div className="button-group">
-            <button type="button" className="back-button" onClick={() => navigate(-1)}>
+            <button
+              type="button"
+              className="back-button"
+              onClick={() => navigate(-1)}
+            >
               Kembali
             </button>
             <button type="submit" className="save-button" disabled={isLoading}>
               {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
-            <button type="button" className="delete-button" onClick={handleDeleteAccount}>
+            <button
+              type="button"
+              className="delete-button"
+              onClick={handleDeleteAccount}
+            >
               Hapus Akun
             </button>
           </div>

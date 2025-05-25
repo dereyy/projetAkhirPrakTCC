@@ -7,16 +7,16 @@ export const Category = {
       console.log("Attempting to create category with name:", name);
 
       // Validasi input di level model
-      if (!name || typeof name !== 'string') {
+      if (!name || typeof name !== "string") {
         throw new Error("Invalid category name");
       }
 
       const query = "INSERT INTO categories (name) VALUES (?)";
       console.log("Executing query:", query, "with params:", [name]);
-      
+
       const [result] = await db.query(query, [name]);
       console.log("Query result:", result);
-      
+
       return result;
     } catch (error) {
       console.error("Error in Category.create:", {
@@ -24,7 +24,7 @@ export const Category = {
         code: error.code,
         errno: error.errno,
         sqlMessage: error.sqlMessage,
-        sqlState: error.sqlState
+        sqlState: error.sqlState,
       });
       throw error;
     }
@@ -62,5 +62,15 @@ export const Category = {
   delete: async (id) => {
     const query = "DELETE FROM categories WHERE id = ?";
     return db.query(query, [id]);
+  },
+
+  deleteByUserId: async (userId) => {
+    try {
+      console.log("Categories are global, no need to delete by userId");
+      return [{ affectedRows: 0 }];
+    } catch (error) {
+      console.error("Error in Category.deleteByUserId:", error);
+      throw error;
+    }
   },
 };

@@ -14,6 +14,7 @@ const app = express();
 dotenv.config();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Middleware untuk logging
 app.use((req, res, next) => {
@@ -52,7 +53,6 @@ app.use(
     ],
   })
 );
-
 
 // Health check endpoints
 app.get("/", (req, res) => {
