@@ -41,6 +41,9 @@ const EditTransaction = () => {
       });
     } catch (error) {
       console.error("Error fetching transaction:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+      }
       setError("Gagal memuat data transaksi");
     }
   };
@@ -94,6 +97,9 @@ const EditTransaction = () => {
       navigate("/dashboard");
     } catch (error) {
       console.error("Error updating transaction:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+      }
       setError(error.response?.data?.message || "Gagal memperbarui transaksi");
     } finally {
       setIsLoading(false);

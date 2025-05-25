@@ -4,8 +4,8 @@ import { verifyToken } from "../middleware/Auth.js";
 
 const router = express.Router();
 
-// Create transaction
-router.post("/", verifyToken, TransactionController.create);
+// Get transactions by date range (harus di atas /:id)
+router.get("/date-range", verifyToken, TransactionController.getByDateRange);
 
 // Get transaction by ID
 router.get("/:id", verifyToken, TransactionController.getById);
@@ -13,8 +13,8 @@ router.get("/:id", verifyToken, TransactionController.getById);
 // Get all transactions for user
 router.get("/", verifyToken, TransactionController.getByUserId);
 
-// Get transactions by date range
-router.get("/date-range", verifyToken, TransactionController.getByDateRange);
+// Create transaction
+router.post("/", verifyToken, TransactionController.create);
 
 // Update transaction
 router.put("/:id", verifyToken, TransactionController.update);
