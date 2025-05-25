@@ -8,6 +8,8 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [error, setError] = useState("");
@@ -24,8 +26,30 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    filterTransactions();
+  }, [transactions, searchQuery]);
+
+  useEffect(() => {
     calculateSummary();
   }, [transactions]);
+
+  const filterTransactions = () => {
+    const filtered = transactions.filter((transaction) => {
+      const searchLower = searchQuery.toLowerCase();
+      const categoryName = transaction.categoryName?.toLowerCase() || "";
+      const description = transaction.description?.toLowerCase() || "";
+      const amount = transaction.amount?.toString() || "";
+      const type = transaction.type?.toLowerCase() || "";
+
+      return (
+        description.includes(searchLower) ||
+        categoryName.includes(searchLower) ||
+        amount.includes(searchQuery) ||
+        type.includes(searchLower)
+      );
+    });
+    setFilteredTransactions(filtered);
+  };
 
   const calculateSummary = () => {
     const totalIncome = transactions
@@ -163,14 +187,25 @@ const Dashboard = () => {
           <AddTransaction onTransactionAdded={handleTransactionAdded} />
         ) : (
           <>
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Cari berdasarkan deskripsi, kategori, jumlah, atau tipe transaksi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+
             <div className="transaction-grid">
-              {transactions.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <div id="no-data-message">
-                  Anda belum mempunyai riwayat manajemen keuangan, silahkan
-                  input terlebih dahulu.
+                  {searchQuery
+                    ? `Tidak ada transaksi yang sesuai dengan pencarian "${searchQuery}"`
+                    : "Anda belum mempunyai riwayat manajemen keuangan, silahkan input terlebih dahulu."}
                 </div>
               ) : (
-                transactions.map((transaction) => (
+                filteredTransactions.map((transaction) => (
                   <div key={transaction.id} className="transaction-card">
                     <span
                       className={`transaction-type ${
