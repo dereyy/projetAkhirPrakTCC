@@ -149,6 +149,12 @@ const Dashboard = () => {
           <button className="btn-detail" onClick={() => navigate("/detail")}>
             Lihat Detail
           </button>
+          <button
+            className="btn-planning"
+            onClick={() => navigate("/planning")}
+          >
+            Perencanaan Keuangan
+          </button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
