@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import AddTransaction from "./AddTransaction";
+import Navbar from "./Navbar";
 import "./Dashboard.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
@@ -51,7 +52,6 @@ const Dashboard = () => {
         },
       });
       console.log("Transactions response:", response.data);
-      // Assuming the response data is an array of transactions directly
       setTransactions(response.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -69,16 +69,10 @@ const Dashboard = () => {
         },
       });
       console.log("Categories response in Dashboard:", response.data);
-      // Assuming the response data is an array of categories directly
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    navigate("/login");
   };
 
   const handleDelete = async (id) => {
@@ -117,14 +111,8 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-page">
+      <Navbar />
       <div className="container">
-        <div className="dashboard-header">
-          <h1>Dashboard Keuangan</h1>
-          <button id="btnLogout" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-
         <div className="financial-summary">
           <div className="summary-card total-balance">
             <h3>Total Saldo</h3>

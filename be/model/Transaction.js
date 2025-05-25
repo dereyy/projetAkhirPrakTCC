@@ -4,37 +4,65 @@ export const Transaction = {
   create: async (transactionData) => {
     const { userId, amount, categoryId, date, description, type } =
       transactionData;
+    
+    console.log("Model received data:", transactionData);
+    
     const query = `
       INSERT INTO transactions 
-      (userId, amount, categoryId, date, description, type) 
-      VALUES (?, ?, ?, ?, ?, ?)
+      (user_id, amount, category_id, date, description, type, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
     `;
-    return db.query(query, [
-      userId,
-      amount,
-      categoryId,
-      date,
-      description,
-      type,
-    ]);
+    
+    console.log("Executing query:", query);
+    console.log("With parameters:", [userId, amount, categoryId, date, description, type]);
+    
+    try {
+      const result = await db.query(query, [userId, amount, categoryId, date, description, type]);
+      console.log("Query result:", result);
+      return result;
+    } catch (error) {
+      console.error("Database error:", error);
+      console.error("Error stack:", error.stack);
+      console.error("SQL query:", error.sql);
+      console.error("SQL message:", error.sqlMessage);
+      throw error;
+    }
   },
 
   getById: async (id, userId) => {
     const query = `
-      SELECT t.*, c.name as categoryName 
+      SELECT 
+        t.id,
+        t.amount,
+        t.description,
+        t.date,
+        t.type,
+        t.created_at,
+        t.category_id as categoryId,
+        t.user_id as userId,
+        c.name as categoryName 
       FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.id = ? AND t.userId = ?
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE t.id = ? AND t.user_id = ?
     `;
     return db.query(query, [id, userId]);
   },
 
   getByUserId: async (userId) => {
     const query = `
-      SELECT t.*, c.name as categoryName 
+      SELECT 
+        t.id,
+        t.amount,
+        t.description,
+        t.date,
+        t.type,
+        t.created_at,
+        t.category_id as categoryId,
+        t.user_id as userId,
+        c.name as categoryName 
       FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.userId = ? 
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE t.user_id = ? 
       ORDER BY t.date DESC
     `;
     return db.query(query, [userId]);
@@ -42,10 +70,19 @@ export const Transaction = {
 
   getByDateRange: async (userId, startDate, endDate) => {
     const query = `
-      SELECT t.*, c.name as categoryName 
+      SELECT 
+        t.id,
+        t.amount,
+        t.description,
+        t.date,
+        t.type,
+        t.created_at,
+        t.category_id as categoryId,
+        t.user_id as userId,
+        c.name as categoryName 
       FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.userId = ? AND t.date BETWEEN ? AND ? 
+      LEFT JOIN categories c ON t.category_id = c.id
+      WHERE t.user_id = ? AND t.date BETWEEN ? AND ? 
       ORDER BY t.date DESC
     `;
     return db.query(query, [userId, startDate, endDate]);
@@ -55,22 +92,14 @@ export const Transaction = {
     const { amount, categoryId, date, description, type } = transactionData;
     const query = `
       UPDATE transactions 
-      SET amount = ?, categoryId = ?, date = ?, description = ?, type = ?
-      WHERE id = ? AND userId = ?
+      SET amount = ?, category_id = ?, date = ?, description = ?, type = ?
+      WHERE id = ? AND user_id = ?
     `;
-    return db.query(query, [
-      amount,
-      categoryId,
-      date,
-      description,
-      type,
-      id,
-      userId,
-    ]);
+    return db.query(query, [amount, categoryId, date, description, type, id, userId]);
   },
 
   delete: async (id, userId) => {
-    const query = "DELETE FROM transactions WHERE id = ? AND userId = ?";
+    const query = "DELETE FROM transactions WHERE id = ? AND user_id = ?";
     return db.query(query, [id, userId]);
   },
 };

@@ -3,10 +3,20 @@ import { Transaction } from "../model/Transaction.js";
 export const TransactionController = {
   create: async (req, res) => {
     try {
+      console.log("Headers:", req.headers);
+      console.log("Raw body:", req.body);
+      
       const { amount, categoryId, date, description, type } = req.body;
       const userId = req.user.userId;
 
-      console.log("Received transaction data for creation:", req.body);
+      console.log("Received transaction data for creation:", {
+        amount,
+        categoryId,
+        date,
+        description,
+        type,
+        userId
+      });
 
       // Validasi data
       if (!amount || amount <= 0) {
@@ -38,19 +48,24 @@ export const TransactionController = {
         return res.status(400).json({ msg: "Format tanggal tidak valid" });
       }
 
-      const result = await Transaction.create({
+      const transactionData = {
         userId,
         amount: Number(amount),
         categoryId,
         date,
         description: description || "",
         type,
-      });
+      };
 
+      console.log("Sending transaction data to model:", transactionData);
+
+      const result = await Transaction.create(transactionData);
       console.log("Transaction created successfully:", result);
+
       res.status(201).json({ msg: "Transaksi berhasil ditambahkan" });
     } catch (error) {
       console.error("Error creating transaction:", error);
+      console.error("Error stack:", error.stack);
       res.status(500).json({ msg: error.message });
     }
   },
@@ -157,8 +172,8 @@ export const TransactionController = {
   },
 
   getAll: async (req, res) => {
+    const userId = req.user.userId;
     try {
-      const userId = req.user.userId;
       console.log(
         `Attempting to fetch all transactions for User ID: ${userId}`
       );

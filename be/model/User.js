@@ -32,12 +32,30 @@ export const User = {
   findById: async (id) => {
     try {
       console.log("Finding user by id:", id);
-      const query = "SELECT id, name, email, gender FROM users WHERE id = ?";
+      const query = "SELECT id, name, email, gender, foto_profil FROM users WHERE id = ?";
       const [rows] = await db.query(query, [id]);
       console.log("Find by id result:", rows);
       return rows;
     } catch (error) {
       console.error("Error in User.findById:", error);
+      throw error;
+    }
+  },
+
+  updateProfile: async (id, { name, email, gender, foto_profil }) => {
+    try {
+      let query = "UPDATE users SET name = ?, email = ?, gender = ?";
+      const params = [name, email, gender];
+      if (foto_profil) {
+        query += ", foto_profil = ?";
+        params.push(foto_profil);
+      }
+      query += " WHERE id = ?";
+      params.push(id);
+      const [result] = await db.query(query, params);
+      return result;
+    } catch (error) {
+      console.error("Error in User.updateProfile:", error);
       throw error;
     }
   }

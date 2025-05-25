@@ -43,11 +43,11 @@ Authorization: Bearer {{token}}
 ### Create Category
 POST {{baseUrl}}/api/categories
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIm5hbWUiOiJKb2huIERvZSIsInVzZXJFbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NDgwODIyMjEsImV4cCI6MTc0ODA4MzEyMX0.eqZ5r6yeKNAbOsGzcZnbmscHWAESyDEkBdpRTNv_gdQ
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIm5hbWUiOiJKb2huIERvZSIsInVzZXJFbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NDgxNDI4NTAsImV4cCI6MTc0ODE0Mzc1MH0.iOAoGwLBlawudcTs_KHvsrrH5eq1Knf48aV2By-JLP8
 
 {
-    "name": "Gaji",
-    "jenis": "income"
+    "name": "Musik",
+    "jenis": "Pengeluaran"
 }
 
 ### Get All Categories
@@ -78,7 +78,7 @@ Authorization: Bearer {{token}}
 ### Create Transaction
 POST {{baseUrl}}/api/transactions
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIm5hbWUiOiJKb2huIERvZSIsInVzZXJFbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NDgxNDI4NTAsImV4cCI6MTc0ODE0Mzc1MH0.iOAoGwLBlawudcTs_KHvsrrH5eq1Knf48aV2By-JLP8
 
 {
     "amount": 1000000,
@@ -114,4 +114,59 @@ Authorization: Bearer {{token}}
 ### Delete Transaction
 DELETE {{baseUrl}}/api/transactions/1
 Content-Type: application/json
-Authorization: Bearer {{token}} 
+Authorization: Bearer {{token}}
+
+### Login
+POST http://localhost:5001/api/user/login
+Content-Type: application/json
+
+{
+  "email": "userbaru@example.com",
+  "password": "password123"
+}
+
+### Register
+POST http://localhost:5001/api/user/register
+Content-Type: application/json
+
+{
+  "name": "User Baru",
+  "email": "userbaru@example.com",
+  "gender": "male",
+  "password": "password123"
+}
+
+### Update Profile
+PUT http://localhost:5001/api/user/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsIm5hbWUiOiJVc2VyIEJhcnUiLCJ1c2VyRW1haWwiOiJ1c2VyYmFydUBleGFtcGxlLmNvbSIsImlhdCI6MTc0ODE0NzQ2MiwiZXhwIjoxNzQ4MTQ4MzYyfQ.BP65yKgkm_8ZUWb3RVgbhVckOxNsPKgcUUNf7kSMxIM
+Content-Type: application/json
+
+{
+  "name": "Nama Baru2",
+  "email": "emailbaru@example.com",
+  "gender": "male"
+}
+
+### Update Profil
+PUT http://localhost:5001/api/user/profile
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="name"
+
+User Updated
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+userupdated@example.com
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="gender"
+
+female
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="foto_profil"; filename="profile.jpg"
+Content-Type: image/jpeg
+
+< ./profile.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW-- 

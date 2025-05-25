@@ -121,4 +121,46 @@ export const UserController = {
       res.status(500).json({ msg: error.message });
     }
   },
+
+  updateProfile: async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const { name, email, gender } = req.body;
+      let foto_profil = null;
+      if (req.file) {
+        foto_profil = req.file.buffer;
+      }
+
+      // Cek email sudah dipakai user lain
+      const [existing] = await User.findByEmail(email);
+      if (existing && existing.id !== userId) {
+        return res.status(400).json({ msg: "Email sudah digunakan user lain" });
+      }
+
+      await User.updateProfile(userId, { name, email, gender, foto_profil });
+      // Ambil data user terbaru
+      const [updatedUser] = await User.findById(userId);
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ msg: error.message });
+    }
+  },
+
+  getProfilePhoto: async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const [user] = await User.findById(userId);
+      
+      if (!user || !user.foto_profil) {
+        return res.status(404).json({ msg: "Foto profil tidak ditemukan" });
+      }
+
+      // Set header untuk gambar
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.send(user.foto_profil);
+    } catch (error) {
+      console.error("Error getting profile photo:", error);
+      res.status(500).json({ msg: error.message });
+    }
+  },
 };

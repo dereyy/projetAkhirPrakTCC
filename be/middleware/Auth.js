@@ -4,6 +4,8 @@ export const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log("Auth middleware - Token:", token);
+
   if (!token) {
     return res.status(401).json({ msg: "Akses ditolak" });
   }
@@ -13,9 +15,13 @@ export const verifyToken = (req, res, next) => {
     req.user = verified;
     next();
   } catch (err) {
+    console.error("Auth error:", err);
     res.status(400).json({ msg: "Token tidak valid" });
   }
 };
+
+// Export auth sebagai alias dari verifyToken
+export const auth = verifyToken;
 
 export const generateAccessToken = (user) => {
   return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
