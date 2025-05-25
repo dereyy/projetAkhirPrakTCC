@@ -10,4 +10,4 @@ router.post("/login", UserController.login);
 router.get("/me", verifyToken, UserController.getMe);
 router.delete("/logout", UserController.logout);
 
-export default router; 
+export default router;

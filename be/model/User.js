@@ -5,8 +5,9 @@ export const User = {
     try {
       const { name, email, gender, password } = userData;
       console.log("Creating user with data:", { name, email, gender });
-      
-      const query = "INSERT INTO users (name, email, gender, password) VALUES (?, ?, ?, ?)";
+
+      const query =
+        "INSERT INTO users (name, email, gender, password) VALUES (?, ?, ?, ?)";
       const [result] = await db.query(query, [name, email, gender, password]);
       console.log("User creation result:", result);
       return result;
@@ -40,5 +41,5 @@ export const User = {
       console.error("Error in User.findById:", error);
       throw error;
     }
-  }
-}; 
+  },
+};
