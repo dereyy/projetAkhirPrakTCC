@@ -3,19 +3,71 @@ import { Category } from "../model/Category.js";
 export const CategoryController = {
   create: async (req, res) => {
     try {
+      console.log("Creating category with data:", req.body);
       const { name } = req.body;
-
-      // Cek kategori sudah ada
-      const [existingCategory] = await Category.getByNama(name);
-      if (existingCategory) {
-        return res.status(400).json({ msg: "Kategori sudah ada" });
+      
+      // Validasi input
+      if (!name) {
+        console.log("Name is missing");
+        return res.status(400).json({ 
+          msg: "Nama kategori harus diisi",
+          error: "NAME_REQUIRED"
+        });
       }
 
-      await Category.create({ name });
-      res.status(201).json({ msg: "Kategori berhasil dibuat" });
+      if (name.trim() === '') {
+        console.log("Name is empty after trim");
+        return res.status(400).json({ 
+          msg: "Nama kategori tidak boleh kosong",
+          error: "NAME_EMPTY"
+        });
+      }
+
+      // Cek apakah kategori sudah ada
+      const [existingCategories] = await Category.getByNama(name.trim());
+      console.log("Existing categories:", existingCategories);
+
+      if (existingCategories && existingCategories.length > 0) {
+        console.log("Category already exists:", existingCategories[0]);
+        return res.status(400).json({ 
+          msg: "Kategori dengan nama tersebut sudah ada",
+          error: "CATEGORY_EXISTS",
+          existingCategory: existingCategories[0]
+        });
+      }
+
+      // Coba buat kategori baru
+      const result = await Category.create({ name: name.trim() });
+      console.log("Category creation result:", result);
+      
+      if (!result || result.affectedRows === 0) {
+        console.log("Failed to create category - no rows affected");
+        return res.status(500).json({ 
+          msg: "Gagal membuat kategori",
+          error: "CREATE_FAILED"
+        });
+      }
+
+      res.status(201).json({ 
+        msg: "Kategori berhasil dibuat",
+        data: { id: result.insertId, name: name.trim() }
+      });
     } catch (error) {
       console.error("Error creating category:", error);
-      res.status(500).json({ msg: error.message });
+      // Log detail error
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlMessage: error.sqlMessage,
+        sqlState: error.sqlState
+      });
+      
+      res.status(500).json({ 
+        msg: "Terjadi kesalahan saat membuat kategori",
+        error: "SERVER_ERROR",
+        details: error.message
+      });
     }
   },
 

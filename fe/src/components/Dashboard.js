@@ -1,10 +1,93 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AddTransaction from "./AddTransaction";
 import "./Dashboard.css";
+import defaultProfile from './default-profile.png';
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+
+const Navbar = () => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/user/me', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+          
+          // Fetch profile photo
+          try {
+            const photoResponse = await fetch('http://localhost:5001/api/user/profile/photo', {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              }
+            });
+            if (photoResponse.ok) {
+              const blob = await photoResponse.blob();
+              const imageUrl = URL.createObjectURL(blob);
+              setProfilePhoto(imageUrl);
+            } else {
+              setProfilePhoto(defaultProfile);
+            }
+          } catch (error) {
+            console.error('Error fetching profile photo:', error);
+            setProfilePhoto(defaultProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    navigate('/login');
+  };
+
+  return (
+    <div className="navbar-menu">
+      {user && (
+        <div className="user-menu">
+          <div 
+            className="user-profile" 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <span className="username">Hallo, {user.name}!</span>
+            <img 
+              src={profilePhoto || defaultProfile} 
+              alt="Profile" 
+              className="profile-picture"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = defaultProfile;
+              }}
+            />
+          </div>
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              <Link to="/profile" className="dropdown-item">Profil Saya</Link>
+              <Link to="/categories" className="dropdown-item">Kategori</Link>
+              <button onClick={handleLogout} className="dropdown-item">Logout</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
@@ -39,10 +122,7 @@ const Dashboard = () => {
       const categoryName = transaction.categoryName?.toLowerCase() || "";
       const description = transaction.description?.toLowerCase() || "";
       const amount = transaction.amount?.toString() || "";
-
-      // Konversi tipe transaksi ke format yang bisa dicari
-      const transactionType =
-        transaction.type === "income" ? "pemasukan" : "pengeluaran";
+      const transactionType = transaction.type === "income" ? "pemasukan" : "pengeluaran";
 
       return (
         description.includes(searchLower) ||
@@ -78,7 +158,6 @@ const Dashboard = () => {
         },
       });
       console.log("Transactions response:", response.data);
-      // Assuming the response data is an array of transactions directly
       setTransactions(response.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -96,16 +175,10 @@ const Dashboard = () => {
         },
       });
       console.log("Categories response in Dashboard:", response.data);
-      // Assuming the response data is an array of categories directly
       setCategories(response.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    navigate("/login");
   };
 
   const handleDelete = async (id) => {
@@ -147,9 +220,7 @@ const Dashboard = () => {
       <div className="container">
         <div className="dashboard-header">
           <h1>Dashboard Keuangan</h1>
-          <button id="btnLogout" onClick={handleLogout}>
-            Logout
-          </button>
+          <Navbar />
         </div>
 
         <div className="financial-summary">

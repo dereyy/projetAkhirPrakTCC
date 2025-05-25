@@ -4,6 +4,8 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../middleware/Auth.js";
+import fs from "fs";
+import path from "path";
 
 export const UserController = {
   register: async (req, res) => {
@@ -121,4 +123,83 @@ export const UserController = {
       res.status(500).json({ msg: error.message });
     }
   },
+
+  getProfilePhoto: async (req, res) => {
+    try {
+      const [user] = await User.findById(req.user.userId);
+      if (!user || !user.foto_profil) {
+        // Jika user tidak memiliki foto profil, kirim default profile
+        return res.status(404).json({ 
+          msg: "Foto profil tidak ditemukan",
+          useDefault: true 
+        });
+      }
+
+      // Send the photo buffer
+      res.writeHead(200, {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': user.foto_profil.length
+      });
+      res.end(user.foto_profil);
+    } catch (error) {
+      console.error("Error getting profile photo:", error);
+      res.status(500).json({ msg: error.message });
+    }
+  },
+
+  updateProfile: async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const updateData = {};
+
+      // Update basic info if provided
+      if (req.body.name) updateData.name = req.body.name;
+      if (req.body.email) updateData.email = req.body.email;
+      if (req.body.gender) updateData.gender = req.body.gender;
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt();
+        updateData.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      // Update photo if provided
+      if (req.file) {
+        try {
+          // File is already in memory as buffer
+          updateData.foto_profil = req.file.buffer;
+        } catch (error) {
+          console.error("Error processing photo:", error);
+          return res.status(500).json({ msg: "Gagal memproses foto profil" });
+        }
+      }
+
+      // If no data to update
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ msg: "Tidak ada data yang diupdate" });
+      }
+
+      // Check if email is already used by another user
+      if (updateData.email) {
+        const [existingUser] = await User.findByEmail(updateData.email);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ msg: "Email sudah digunakan" });
+        }
+      }
+
+      // Update user data
+      const result = await User.update(userId, updateData);
+      if (!result) {
+        return res.status(404).json({ msg: "User tidak ditemukan" });
+      }
+
+      // Get updated user data
+      const [updatedUser] = await User.findById(userId);
+      res.json({
+        msg: "Profile berhasil diupdate",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ msg: error.message });
+    }
+  }
 };

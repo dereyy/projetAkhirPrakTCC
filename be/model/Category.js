@@ -2,9 +2,32 @@ import db from "../config/database.js";
 
 export const Category = {
   create: async (categoryData) => {
-    const { name } = categoryData;
-    const query = "INSERT INTO categories (name) VALUES (?)";
-    return db.query(query, [name]);
+    try {
+      const { name } = categoryData;
+      console.log("Attempting to create category with name:", name);
+
+      // Validasi input di level model
+      if (!name || typeof name !== 'string') {
+        throw new Error("Invalid category name");
+      }
+
+      const query = "INSERT INTO categories (name) VALUES (?)";
+      console.log("Executing query:", query, "with params:", [name]);
+      
+      const [result] = await db.query(query, [name]);
+      console.log("Query result:", result);
+      
+      return result;
+    } catch (error) {
+      console.error("Error in Category.create:", {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlMessage: error.sqlMessage,
+        sqlState: error.sqlState
+      });
+      throw error;
+    }
   },
 
   getAll: async () => {
@@ -13,8 +36,16 @@ export const Category = {
   },
 
   getByNama: async (name) => {
-    const query = "SELECT * FROM categories WHERE name = ?";
-    return db.query(query, [name]);
+    try {
+      console.log("Searching for category with name:", name);
+      const query = "SELECT * FROM categories WHERE name = ?";
+      const [rows] = await db.query(query, [name]);
+      console.log("Found categories:", rows);
+      return [rows];
+    } catch (error) {
+      console.error("Error in Category.getByNama:", error);
+      throw error;
+    }
   },
 
   getByJenis: async (jenis) => {

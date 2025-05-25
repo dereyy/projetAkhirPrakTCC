@@ -13,6 +13,8 @@ import PlanRoute from "./route/PlanRoute.js"; // untuk fitur perencanaan
 const app = express();
 dotenv.config();
 
+app.use(express.json());
+
 // Middleware untuk logging
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -51,7 +53,6 @@ app.use(
   })
 );
 
-app.use(express.json());
 
 // Health check endpoints
 app.get("/", (req, res) => {

@@ -13,6 +13,8 @@ import EditTransaction from "./pages/EditTransaction";
 import FinancialDetail from "./components/FinancialDetail";
 import FinancialPlanning from "./components/FinancialPlanning";
 import "./App.css";
+import Profile from "./components/Profile.js";
+import Categories from "./components/Categories.js";
 
 function App() {
   const [isApiConnected, setIsApiConnected] = useState(false);
@@ -50,6 +52,8 @@ function App() {
         <Route path="/edit/:id" element={<EditTransaction />} />
         <Route path="/detail" element={<FinancialDetail />} />
         <Route path="/planning" element={<FinancialPlanning />} />
+        <Route path="/profile" element={<Profile/>} />
+        <Route path="/categories" element={<Categories/>} />
         <Route path="/" element={<Login />} />
       </Routes>
     </Router>
