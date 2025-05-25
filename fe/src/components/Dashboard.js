@@ -39,13 +39,16 @@ const Dashboard = () => {
       const categoryName = transaction.categoryName?.toLowerCase() || "";
       const description = transaction.description?.toLowerCase() || "";
       const amount = transaction.amount?.toString() || "";
-      const type = transaction.type?.toLowerCase() || "";
+
+      // Konversi tipe transaksi ke format yang bisa dicari
+      const transactionType =
+        transaction.type === "income" ? "pemasukan" : "pengeluaran";
 
       return (
         description.includes(searchLower) ||
         categoryName.includes(searchLower) ||
         amount.includes(searchQuery) ||
-        type.includes(searchLower)
+        transactionType.includes(searchLower)
       );
     });
     setFilteredTransactions(filtered);
