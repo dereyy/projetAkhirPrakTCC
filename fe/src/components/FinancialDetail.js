@@ -28,13 +28,13 @@ const FinancialDetail = () => {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/transactions`, {
+      const response = await axios.get(`${API_URL}/api/transaction`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
       console.log("Data transaksi:", response.data); // Debug log
-      setTransactions(response.data);
+      setTransactions(response.data.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
     }
@@ -94,11 +94,33 @@ const FinancialDetail = () => {
 
   const handleDateChange = (e) => {
     const newDate = new Date(e.target.value);
+    const today = new Date();
+
+    // Validasi untuk memastikan tanggal tidak lebih besar dari hari ini
+    if (timeFilter === "day" && newDate > today) {
+      return;
+    }
+
+    // Validasi untuk bulan
     if (timeFilter === "month") {
-      // Set tanggal ke tanggal 1 saat memilih bulan
+      const selectedMonth = new Date(
+        newDate.getFullYear(),
+        newDate.getMonth() + 1,
+        0
+      );
+      if (selectedMonth > today) {
+        return;
+      }
+    }
+
+    // Validasi untuk tahun
+    if (timeFilter === "year" && newDate.getFullYear() > today.getFullYear()) {
+      return;
+    }
+
+    if (timeFilter === "month") {
       newDate.setDate(1);
     } else if (timeFilter === "year") {
-      // Set tanggal ke 1 Januari saat memilih tahun
       newDate.setMonth(0);
       newDate.setDate(1);
     }
@@ -150,6 +172,7 @@ const FinancialDetail = () => {
   };
 
   const getDateInputValue = () => {
+    const today = new Date();
     switch (timeFilter) {
       case "year":
         return selectedDate.getFullYear();
@@ -159,6 +182,21 @@ const FinancialDetail = () => {
         ).padStart(2, "0")}`;
       default:
         return selectedDate.toISOString().split("T")[0];
+    }
+  };
+
+  const getMaxDate = () => {
+    const today = new Date();
+    switch (timeFilter) {
+      case "year":
+        return today.getFullYear().toString();
+      case "month":
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}`;
+      default:
+        return today.toISOString().split("T")[0];
     }
   };
 
@@ -224,8 +262,7 @@ const FinancialDetail = () => {
                 type={getDateInputType()}
                 value={getDateInputValue()}
                 onChange={handleDateChange}
-                min={timeFilter === "year" ? "2000" : undefined}
-                max={timeFilter === "year" ? "2100" : undefined}
+                max={getMaxDate()}
               />
             </div>
           </div>

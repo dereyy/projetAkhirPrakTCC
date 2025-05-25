@@ -52,9 +52,20 @@
   min-height: 100px;
 }
 
-.submit-button {
-  background-color: #4a90e2;
-  color: white;
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.submit-button,
+.cancel-button {
+  flex: 1;
   padding: 0.75rem;
   border: none;
   border-radius: 4px;
@@ -62,16 +73,30 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-top: 1rem;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.submit-button {
+  background-color: #4a90e2;
+  color: white;
 }
 
 .submit-button:hover {
   background-color: #357abd;
 }
 
-.submit-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.cancel-button {
+  background-color: #dc3545;
+  color: white;
+  margin-top: 1rem;
+}
+
+.cancel-button:hover {
+  background-color: #c82333;
 }
 
 .error-message {

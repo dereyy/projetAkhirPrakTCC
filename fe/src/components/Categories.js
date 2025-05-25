@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Categories.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+
 const Categories = () => {
   const [categories, setCategories] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: "" });
+  const [editingCategory, setEditingCategory] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
@@ -17,12 +21,12 @@ const Categories = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:5001/api/categories", {
+      const response = await axios.get(`${API_URL}/api/category`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-      setCategories(response.data);
+      setCategories(response.data.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
       if (error.response) {
@@ -45,48 +49,95 @@ const Categories = () => {
     }
 
     try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("Token tidak ditemukan");
+      }
+
       console.log("Sending category data:", newCategory);
       const response = await axios.post(
-        "http://localhost:5001/api/categories",
-        newCategory,
+        `${API_URL}/api/category`,
+        { name: newCategory.name.trim() },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
       );
-      console.log("Server response:", response.data);
-      setSuccess("Kategori berhasil ditambahkan");
-      setNewCategory({ name: "" });
-      setShowAddForm(false);
-      fetchCategories();
+
+      if (response.data) {
+        setSuccess("Kategori berhasil ditambahkan");
+        setNewCategory({ name: "" });
+        setShowAddForm(false);
+        fetchCategories();
+      }
     } catch (error) {
       console.error("Error adding category:", error);
       if (error.response) {
-        // Server responded with error
-        const errorMsg = error.response.data.msg || "Gagal menambahkan kategori";
-        const errorCode = error.response.data.error;
-        
-        switch (errorCode) {
-          case "NAME_REQUIRED":
-            setError("Nama kategori harus diisi");
-            break;
-          case "NAME_EMPTY":
-            setError("Nama kategori tidak boleh kosong");
-            break;
-          case "CATEGORY_EXISTS":
-            setError("Kategori dengan nama tersebut sudah ada");
-            break;
-          default:
-            setError(errorMsg);
-        }
+        const errorMsg =
+          error.response.data?.msg || "Gagal menambahkan kategori";
+        setError(errorMsg);
       } else if (error.request) {
-        // Request was made but no response
         setError("Tidak dapat terhubung ke server");
       } else {
-        // Other errors
-        setError("Gagal menambahkan kategori: " + error.message);
+        setError(error.message || "Gagal menambahkan kategori");
+      }
+    }
+  };
+
+  const handleEditCategory = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!editingCategory || !editingCategory.name.trim()) {
+      setError("Nama kategori tidak boleh kosong");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("Token tidak ditemukan");
+      }
+
+      const response = await axios.put(
+        `${API_URL}/api/category/${editingCategory.id}`,
+        { name: editingCategory.name.trim() },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data) {
+        setSuccess("Kategori berhasil diperbarui");
+        setEditingCategory(null);
+        setShowEditForm(false);
+        fetchCategories();
+      }
+    } catch (error) {
+      console.error("Error updating category:", error);
+      if (error.response) {
+        if (error.response.status === 404) {
+          setError("Kategori tidak ditemukan");
+        } else if (error.response.status === 400) {
+          setError(
+            error.response.data?.message || "Gagal memperbarui kategori"
+          );
+        } else {
+          setError(
+            error.response.data?.message ||
+              "Terjadi kesalahan saat memperbarui kategori"
+          );
+        }
+      } else if (error.request) {
+        setError("Tidak dapat terhubung ke server");
+      } else {
+        setError(error.message || "Gagal memperbarui kategori");
       }
     }
   };
@@ -94,7 +145,7 @@ const Categories = () => {
   const handleDeleteCategory = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus kategori ini?")) {
       try {
-        await axios.delete(`http://localhost:5001/api/categories/${id}`, {
+        await axios.delete(`${API_URL}/api/category/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
@@ -110,6 +161,12 @@ const Categories = () => {
         }
       }
     }
+  };
+
+  const startEdit = (category) => {
+    setEditingCategory(category);
+    setShowEditForm(true);
+    setShowAddForm(false);
   };
 
   return (
@@ -154,6 +211,45 @@ const Categories = () => {
               </div>
             </form>
           </div>
+        ) : showEditForm ? (
+          <div className="edit-category-form">
+            <h2>Edit Kategori</h2>
+            <form onSubmit={handleEditCategory}>
+              <div className="form-group">
+                <label htmlFor="edit-name">Nama Kategori</label>
+                <input
+                  type="text"
+                  id="edit-name"
+                  value={editingCategory?.name || ""}
+                  onChange={(e) =>
+                    setEditingCategory({
+                      ...editingCategory,
+                      name: e.target.value,
+                    })
+                  }
+                  required
+                  placeholder="Masukkan nama kategori"
+                  minLength={1}
+                  maxLength={255}
+                />
+              </div>
+              <div className="button-group">
+                <button type="submit" className="btn-save">
+                  Simpan
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingCategory(null);
+                  }}
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
         ) : (
           <>
             <div className="categories-grid">
@@ -165,12 +261,20 @@ const Categories = () => {
                 categories.map((category) => (
                   <div key={category.id} className="category-card">
                     <h3>{category.name}</h3>
-                    <button
-                      className="btn-delete"
-                      onClick={() => handleDeleteCategory(category.id)}
-                    >
-                      Hapus
-                    </button>
+                    <div className="category-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => startEdit(category)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        Hapus
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -185,4 +289,4 @@ const Categories = () => {
   );
 };
 
-export default Categories; 
+export default Categories;

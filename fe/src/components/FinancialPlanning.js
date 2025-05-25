@@ -30,13 +30,15 @@ const FinancialPlanning = () => {
 
   const fetchPlans = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/plans`, {
+      const response = await axios.get(`${API_URL}/api/plan`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-      setPlans(response.data);
-      calculateSummary(response.data);
+      console.log("Fetching plans...");
+      console.log("Plans response:", response.data);
+      setPlans(response.data.data);
+      calculateSummary(response.data.data);
     } catch (error) {
       console.error("Error fetching plans:", error);
     }
@@ -44,12 +46,14 @@ const FinancialPlanning = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/categories`, {
+      const response = await axios.get(`${API_URL}/api/category`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-      setCategories(response.data);
+      console.log("Fetching categories...");
+      console.log("Categories response:", response.data);
+      setCategories(response.data.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -57,17 +61,19 @@ const FinancialPlanning = () => {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/transactions`, {
+      const response = await axios.get(`${API_URL}/api/transaction`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
+      console.log("Fetching transactions...");
+      console.log("Transactions response:", response.data);
       // Hitung total saldo dari transaksi
-      const totalIncome = response.data
+      const totalIncome = response.data.data
         .filter((t) => t.type === "income")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-      const totalExpense = response.data
+      const totalExpense = response.data.data
         .filter((t) => t.type === "expense")
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -102,6 +108,7 @@ const FinancialPlanning = () => {
   };
 
   const handleEdit = (plan) => {
+    console.log("Editing plan:", plan);
     setEditingPlan(plan);
     setNewPlan({
       categoryId: plan.categoryId,
@@ -116,51 +123,77 @@ const FinancialPlanning = () => {
     try {
       if (editingPlan) {
         // Update existing plan
-        await axios.put(
-          `${API_URL}/api/plans/${editingPlan.id}`,
-          {
-            amount: Number(newPlan.amount),
-            description: newPlan.description,
-            remainingAmount: Number(newPlan.amount), // Reset remaining amount
-          },
+        const planData = {
+          categoryId: newPlan.categoryId,
+          amount: Number(newPlan.amount),
+          description: newPlan.description,
+        };
+        console.log("Mengupdate plan dengan data:", planData);
+        const response = await axios.put(
+          `${API_URL}/api/plan/${editingPlan.id}`,
+          planData,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
+        console.log("Response update plan:", response.data);
         setEditingPlan(null);
       } else {
         // Create new plan
-        await axios.post(`${API_URL}/api/plans`, newPlan, {
+        const planData = {
+          categoryId: newPlan.categoryId,
+          amount: Number(newPlan.amount),
+          description: newPlan.description,
+        };
+        console.log("Membuat plan baru dengan data:", planData);
+        const response = await axios.post(`${API_URL}/api/plan`, planData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
+        console.log("Response create plan:", response.data);
       }
-      setNewPlan({ categoryId: "", amount: "", description: "" });
+      setNewPlan({
+        categoryId: "",
+        amount: "",
+        description: "",
+      });
       setShowAddForm(false);
       fetchPlans();
     } catch (error) {
       console.error("Error saving plan:", error);
-      alert("Gagal menyimpan perencanaan");
+      console.error("Detail error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+      });
+      alert(error.response?.data?.message || "Gagal menyimpan perencanaan");
     }
   };
 
   const handleCancel = () => {
     setShowAddForm(false);
     setEditingPlan(null);
-    setNewPlan({ categoryId: "", amount: "", description: "" });
+    setNewPlan({
+      categoryId: "",
+      amount: "",
+      description: "",
+    });
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus perencanaan ini?")) {
       try {
-        await axios.delete(`${API_URL}/api/plans/${id}`, {
+        console.log("Deleting plan with id:", id);
+        const response = await axios.delete(`${API_URL}/api/plan/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
+        console.log("Delete response:", response.data);
         fetchPlans();
       } catch (error) {
         console.error("Error deleting plan:", error);
@@ -206,6 +239,12 @@ const FinancialPlanning = () => {
             </div>
           </div>
         </div>
+
+        {!showAddForm && (
+          <button className="btn-add" onClick={() => setShowAddForm(true)}>
+            + Tambah Perencanaan
+          </button>
+        )}
 
         {showAddForm ? (
           <div className="add-plan-form">
@@ -325,10 +364,6 @@ const FinancialPlanning = () => {
                 ))
               )}
             </div>
-
-            <button className="btn-add" onClick={() => setShowAddForm(true)}>
-              + Tambah Perencanaan
-            </button>
           </>
         )}
       </div>

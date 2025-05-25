@@ -31,13 +31,24 @@ const Login = () => {
       );
 
       console.log("Login response:", response.data);
-      const { accessToken } = response.data;
+      const { data } = response.data;
 
-      if (!accessToken) {
+      if (!data || !data.accessToken) {
         throw new Error("Token tidak ada di response");
       }
 
-      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          gender: data.gender,
+        })
+      );
+
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
@@ -50,7 +61,7 @@ const Login = () => {
       } else if (err.response) {
         // Server responded with error
         setError(
-          err.response.data?.msg || `Server error: ${err.response.status}`
+          err.response.data?.message || `Server error: ${err.response.status}`
         );
       } else if (err.request) {
         // Request made but no response

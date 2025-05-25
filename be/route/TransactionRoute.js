@@ -4,15 +4,22 @@ import { verifyToken } from "../middleware/Auth.js";
 
 const router = express.Router();
 
-// Semua route transaksi memerlukan autentikasi
-router.use(verifyToken);
+// Create transaction
+router.post("/", verifyToken, TransactionController.create);
 
-// CRUD routes untuk transaksi
-router.post("/", TransactionController.create);
-router.get("/", TransactionController.getAll);
-router.get("/range", TransactionController.getByDateRange);
-router.get("/:id", TransactionController.getById);
-router.put("/:id", TransactionController.update);
-router.delete("/:id", TransactionController.delete);
+// Get transaction by ID
+router.get("/:id", verifyToken, TransactionController.getById);
+
+// Get all transactions for user
+router.get("/", verifyToken, TransactionController.getByUserId);
+
+// Get transactions by date range
+router.get("/date-range", verifyToken, TransactionController.getByDateRange);
+
+// Update transaction
+router.put("/:id", verifyToken, TransactionController.update);
+
+// Delete transaction
+router.delete("/:id", verifyToken, TransactionController.delete);
 
 export default router;

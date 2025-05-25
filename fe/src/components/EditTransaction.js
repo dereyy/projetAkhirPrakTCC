@@ -1,58 +1,65 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import config from "../config";
+import { useParams, useNavigate } from "react-router-dom";
 import "./Transaction.css";
 
-const AddTransaction = ({ onTransactionAdded }) => {
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+
+const EditTransaction = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: "",
     categoryId: "",
-    type: "expense", // default value
+    type: "",
   });
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    fetchTransaction();
     fetchCategories();
-  }, []);
+  }, [id]);
+
+  const fetchTransaction = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/transaction/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+      const transaction = response.data.data;
+      setFormData({
+        amount: transaction.amount,
+        description: transaction.description || "",
+        date: transaction.date.split("T")[0],
+        categoryId: transaction.categoryId,
+        type: transaction.type,
+      });
+    } catch (error) {
+      console.error("Error fetching transaction:", error);
+      setError("Gagal memuat data transaksi");
+    }
+  };
 
   const fetchCategories = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        throw new Error("Token tidak ditemukan");
-      }
-
-      const response = await axios.get(`${config.API_URL}/api/category`, {
+      const response = await axios.get(`${API_URL}/api/category`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
-
       console.log("Categories response:", response.data);
-
-      if (Array.isArray(response.data)) {
-        setCategories(response.data);
-      } else if (response.data && Array.isArray(response.data.data)) {
-        setCategories(response.data.data);
-      } else {
-        console.error("Format data kategori tidak valid:", response.data);
-        setError("Format data kategori tidak valid");
+      setCategories(response.data.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      if (error.response) {
+        console.error("Error response data (categories):", error.response.data);
       }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      if (err.response) {
-        console.error("Response error:", err.response.data);
-        setError(err.response.data.msg || "Gagal memuat kategori");
-      } else if (err.request) {
-        console.error("Request error:", err.request);
-        setError("Tidak dapat terhubung ke server");
-      } else {
-        setError("Gagal memuat kategori");
-      }
+      setError("Gagal memuat kategori");
     }
   };
 
@@ -70,56 +77,32 @@ const AddTransaction = ({ onTransactionAdded }) => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        throw new Error("Token tidak ditemukan");
-      }
-
-      // Konversi amount ke number
-      const transactionData = {
-        ...formData,
-        amount: parseFloat(formData.amount),
-      };
-
-      const response = await axios.post(
-        `${config.API_URL}/api/transaction`,
-        transactionData,
+      const response = await axios.put(
+        `${API_URL}/api/transaction/${id}`,
+        {
+          ...formData,
+          amount: parseFloat(formData.amount),
+        },
         {
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      console.log("Transaction added:", response.data);
-
-      // Reset form
-      setFormData({
-        amount: "",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-        categoryId: "",
-        type: "expense",
-      });
-
-      // Notify parent component
-      if (onTransactionAdded) {
-        onTransactionAdded();
-      }
-    } catch (err) {
-      console.error("Error adding transaction:", err);
-      setError(
-        err.response?.data?.msg || "Terjadi kesalahan saat menambah transaksi"
-      );
+      console.log("Transaction updated:", response.data);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      setError(error.response?.data?.message || "Gagal memperbarui transaksi");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="add-transaction-container">
-      <h2>Tambah Transaksi Baru</h2>
+    <div className="edit-transaction-container">
+      <h2>Edit Transaksi</h2>
       {error && <div className="error-message">{error}</div>}
 
       <form onSubmit={handleSubmit} className="transaction-form">
@@ -162,12 +145,11 @@ const AddTransaction = ({ onTransactionAdded }) => {
             required
           >
             <option value="">Pilih Kategori</option>
-            {Array.isArray(categories) &&
-              categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -191,19 +173,18 @@ const AddTransaction = ({ onTransactionAdded }) => {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="Tambahkan deskripsi transaksi (opsional)"
-            rows="3"
+            placeholder="Masukkan deskripsi transaksi"
           />
         </div>
 
         <div className="button-group">
-          <button type="submit" className="submit-button" disabled={isLoading}>
-            {isLoading ? "Menambahkan..." : "Tambah Transaksi"}
+          <button type="submit" className="btn-submit" disabled={isLoading}>
+            {isLoading ? "Menyimpan..." : "Simpan"}
           </button>
           <button
             type="button"
-            className="cancel-button"
-            onClick={() => onTransactionAdded()}
+            className="btn-cancel"
+            onClick={() => navigate("/dashboard")}
           >
             Batal
           </button>
@@ -213,4 +194,4 @@ const AddTransaction = ({ onTransactionAdded }) => {
   );
 };
 
-export default AddTransaction;
+export default EditTransaction;

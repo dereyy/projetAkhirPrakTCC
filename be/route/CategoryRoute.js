@@ -4,14 +4,19 @@ import { verifyToken } from "../middleware/Auth.js";
 
 const router = express.Router();
 
-// Semua route kategori memerlukan autentikasi
-router.use(verifyToken);
+// Create category
+router.post("/", verifyToken, CategoryController.create);
 
-// CRUD routes untuk kategori
-router.post("/", CategoryController.create);
-router.get("/", CategoryController.getAll);
-router.get("/:jenis", CategoryController.getByJenis);
-router.put("/:id", CategoryController.update);
-router.delete("/:id", CategoryController.delete);
+// Get all categories
+router.get("/", verifyToken, CategoryController.getAll);
 
-export default router; 
+// Get categories by type
+router.get("/type/:type", verifyToken, CategoryController.getByType);
+
+// Update category
+router.put("/:id", verifyToken, CategoryController.update);
+
+// Delete category
+router.delete("/:id", verifyToken, CategoryController.delete);
+
+export default router;

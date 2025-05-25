@@ -3,12 +3,11 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-
-// Import routes
-import TransactionRoute from "./route/TransactionRoute.js"; // untuk fitur transaksi
-import CategoryRoute from "./route/CategoryRoute.js"; // untuk fitur kategori
-import UserRoute from "./route/UserRoute.js"; // untuk auth/user
-import PlanRoute from "./route/PlanRoute.js"; // untuk fitur perencanaan
+import UserRoute from "./route/UserRoute.js";
+import TransactionRoute from "./route/TransactionRoute.js";
+import CategoryRoute from "./route/CategoryRoute.js";
+import PlanRoute from "./route/PlanRoute.js";
+import { syncDatabase } from "./config/db.js";
 
 const app = express();
 dotenv.config();
@@ -68,8 +67,8 @@ app.get("/api", (req, res) => {
     status: "ok",
     message: "API is running",
     endpoints: {
-      transactions: "/api/transactions",
-      categories: "/api/categories",
+      transactions: "/api/transaction",
+      categories: "/api/category",
       auth: "/api/user",
     },
     timestamp: new Date().toISOString(),
@@ -77,16 +76,20 @@ app.get("/api", (req, res) => {
 });
 
 // Use routes
-app.use("/api/transactions", TransactionRoute);
-app.use("/api/categories", CategoryRoute);
 app.use("/api/user", UserRoute);
-app.use("/api/plans", PlanRoute);
+app.use("/api/transaction", TransactionRoute);
+app.use("/api/category", CategoryRoute);
+app.use("/api/plan", PlanRoute);
+
+// Initialize database
+syncDatabase();
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error("Error:", err);
   res.status(500).json({
-    msg: "Terjadi kesalahan pada server",
+    status: "error",
+    message: "Terjadi kesalahan pada server",
     error: err.message,
   });
 });

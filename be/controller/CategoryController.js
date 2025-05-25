@@ -1,95 +1,93 @@
-import { Category } from "../model/Category.js";
+import Category from "../model/Category.js";
 
 export const CategoryController = {
   create: async (req, res) => {
     try {
-      console.log("Creating category with data:", req.body);
       const { name } = req.body;
-      
-      // Validasi input
-      if (!name) {
-        console.log("Name is missing");
-        return res.status(400).json({ 
-          msg: "Nama kategori harus diisi",
-          error: "NAME_REQUIRED"
-        });
-      }
 
-      if (name.trim() === '') {
-        console.log("Name is empty after trim");
-        return res.status(400).json({ 
-          msg: "Nama kategori tidak boleh kosong",
-          error: "NAME_EMPTY"
+      // Validasi data
+      if (!name) {
+        return res.status(400).json({
+          status: "error",
+          message: "Nama kategori harus diisi",
         });
       }
 
       // Cek apakah kategori sudah ada
-      const [existingCategories] = await Category.getByNama(name.trim());
-      console.log("Existing categories:", existingCategories);
+      const existingCategory = await Category.findOne({
+        where: { name },
+      });
 
-      if (existingCategories && existingCategories.length > 0) {
-        console.log("Category already exists:", existingCategories[0]);
-        return res.status(400).json({ 
-          msg: "Kategori dengan nama tersebut sudah ada",
-          error: "CATEGORY_EXISTS",
-          existingCategory: existingCategories[0]
+      if (existingCategory) {
+        return res.status(400).json({
+          status: "error",
+          message: "Kategori sudah ada",
         });
       }
 
-      // Coba buat kategori baru
-      const result = await Category.create({ name: name.trim() });
-      console.log("Category creation result:", result);
-      
-      if (!result || result.affectedRows === 0) {
-        console.log("Failed to create category - no rows affected");
-        return res.status(500).json({ 
-          msg: "Gagal membuat kategori",
-          error: "CREATE_FAILED"
-        });
-      }
+      const category = await Category.create({
+        name,
+      });
 
-      res.status(201).json({ 
-        msg: "Kategori berhasil dibuat",
-        data: { id: result.insertId, name: name.trim() }
+      res.status(201).json({
+        status: "success",
+        message: "Kategori berhasil ditambahkan",
+        data: category,
       });
     } catch (error) {
-      console.error("Error creating category:", error);
-      // Log detail error
-      console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        sqlMessage: error.sqlMessage,
-        sqlState: error.sqlState
-      });
-      
-      res.status(500).json({ 
-        msg: "Terjadi kesalahan saat membuat kategori",
-        error: "SERVER_ERROR",
-        details: error.message
+      console.error("Error in create category:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal menambahkan kategori",
       });
     }
   },
 
   getAll: async (req, res) => {
     try {
-      const [categories] = await Category.getAll();
-      console.log("Categories from database:", categories);
-      res.json(categories);
+      const categories = await Category.findAll({
+        order: [["name", "ASC"]],
+      });
+
+      res.json({
+        status: "success",
+        data: categories,
+      });
     } catch (error) {
-      console.error("Error getting categories:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in get categories:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil kategori",
+      });
     }
   },
 
-  getByJenis: async (req, res) => {
+  getByType: async (req, res) => {
     try {
-      const { jenis } = req.params;
-      const [categories] = await Category.getByJenis(jenis);
-      res.json(categories);
+      const { type } = req.params;
+
+      if (!["income", "expense"].includes(type)) {
+        return res.status(400).json({
+          status: "error",
+          message: "Tipe kategori harus income atau expense",
+        });
+      }
+
+      const categories = await Category.findAll({
+        where: { type },
+        order: [["name", "ASC"]],
+      });
+
+      res.json({
+        status: "success",
+        data: categories,
+      });
     } catch (error) {
-      console.error("Error getting categories by jenis:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in get categories by type:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil kategori",
+      });
     }
   },
 
@@ -97,22 +95,71 @@ export const CategoryController = {
     try {
       const { id } = req.params;
       const { name } = req.body;
-      await Category.update(id, { name });
-      res.json({ msg: "Kategori berhasil diupdate" });
+
+      const category = await Category.findByPk(id);
+      if (!category) {
+        return res.status(404).json({
+          status: "error",
+          message: "Kategori tidak ditemukan",
+        });
+      }
+
+      // Cek apakah nama kategori sudah ada
+      if (name && name !== category.name) {
+        const existingCategory = await Category.findOne({
+          where: { name },
+        });
+
+        if (existingCategory) {
+          return res.status(400).json({
+            status: "error",
+            message: "Kategori sudah ada",
+          });
+        }
+      }
+
+      await category.update({
+        name: name || category.name,
+      });
+
+      res.json({
+        status: "success",
+        message: "Kategori berhasil diperbarui",
+        data: category,
+      });
     } catch (error) {
-      console.error("Error updating category:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in update category:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal memperbarui kategori",
+      });
     }
   },
 
   delete: async (req, res) => {
     try {
       const { id } = req.params;
-      await Category.delete(id);
-      res.json({ msg: "Kategori berhasil dihapus" });
+
+      const category = await Category.findByPk(id);
+      if (!category) {
+        return res.status(404).json({
+          status: "error",
+          message: "Kategori tidak ditemukan",
+        });
+      }
+
+      await category.destroy();
+
+      res.json({
+        status: "success",
+        message: "Kategori berhasil dihapus",
+      });
     } catch (error) {
-      console.error("Error deleting category:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in delete category:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal menghapus kategori",
+      });
     }
   },
 };

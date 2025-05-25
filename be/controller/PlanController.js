@@ -1,178 +1,267 @@
-import {
-  createPlan,
-  getPlansByUserId,
-  getPlanById,
-  updatePlan,
-  deletePlan,
-  updateRemainingAmount,
-} from "../model/PlanModel.js";
+import Plan from "../model/Plan.js";
+import Category from "../model/Category.js";
+import Transaction from "../model/Transaction.js";
+import { Op } from "sequelize";
 
-export const createPlanController = async (req, res) => {
-  try {
-    const { categoryId, amount, description } = req.body;
-    console.log("User data:", req.user); // Log untuk memeriksa isi req.user
-    const userId = req.user.userId;
+export const PlanController = {
+  create: async (req, res) => {
+    try {
+      const { categoryId, amount, description } = req.body;
+      const userId = req.user.userId;
 
-    if (!userId) {
-      return res.status(401).json({
-        msg: "User ID tidak ditemukan",
+      // Validasi data
+      if (!categoryId) {
+        return res.status(400).json({
+          status: "error",
+          message: "Kategori harus dipilih",
+        });
+      }
+
+      if (!amount || amount <= 0) {
+        return res.status(400).json({
+          status: "error",
+          message: "Jumlah harus lebih dari 0",
+        });
+      }
+
+      if (!description) {
+        return res.status(400).json({
+          status: "error",
+          message: "Deskripsi harus diisi",
+        });
+      }
+
+      // Cek apakah kategori ada
+      const category = await Category.findByPk(categoryId);
+      if (!category) {
+        return res.status(404).json({
+          status: "error",
+          message: "Kategori tidak ditemukan",
+        });
+      }
+
+      // Cek apakah kategori sudah memiliki perencanaan
+      const existingPlan = await Plan.findOne({
+        where: { categoryId, userId },
       });
-    }
 
-    if (!categoryId || !amount || !description) {
-      return res.status(400).json({
-        msg: "Semua field harus diisi",
-      });
-    }
+      if (existingPlan) {
+        return res.status(400).json({
+          status: "error",
+          message: "Kategori ini sudah memiliki perencanaan",
+        });
+      }
 
-    const result = await createPlan({
-      userId,
-      categoryId,
-      amount,
-      description,
-      remainingAmount: amount,
-    });
-
-    res.status(201).json({
-      msg: "Perencanaan berhasil dibuat",
-      data: {
-        id: result[0].insertId,
+      const plan = await Plan.create({
         userId,
         categoryId,
         amount,
         description,
         remainingAmount: amount,
-      },
-    });
-  } catch (error) {
-    console.error("Error creating plan:", error);
-    res.status(500).json({
-      msg: "Gagal membuat perencanaan",
-      error: error.message,
-    });
-  }
-};
+      });
 
-export const getPlansController = async (req, res) => {
-  try {
-    const userId = req.user.userId; // Mengambil userId dari req.user.userId
-    const plans = await getPlansByUserId(userId);
-    res.json(plans[0]);
-  } catch (error) {
-    console.error("Error getting plans:", error);
-    res.status(500).json({
-      msg: "Gagal mengambil data perencanaan",
-      error: error.message,
-    });
-  }
-};
-
-export const getPlanByIdController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const plan = await getPlanById(id);
-
-    if (plan[0].length === 0) {
-      return res.status(404).json({
-        msg: "Perencanaan tidak ditemukan",
+      res.status(201).json({
+        status: "success",
+        message: "Rencana berhasil ditambahkan",
+        data: {
+          ...plan.toJSON(),
+          categoryName: category.name,
+        },
+      });
+    } catch (error) {
+      console.error("Error in create plan:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal menambahkan rencana",
       });
     }
+  },
 
-    res.json(plan[0][0]);
-  } catch (error) {
-    console.error("Error getting plan:", error);
-    res.status(500).json({
-      msg: "Gagal mengambil data perencanaan",
-      error: error.message,
-    });
-  }
-};
+  getByUserId: async (req, res) => {
+    try {
+      const userId = req.user.userId;
 
-export const updatePlanController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { amount, description, remainingAmount } = req.body;
+      const plans = await Plan.findAll({
+        where: { userId },
+        include: [
+          {
+            model: Category,
+            attributes: ["name"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
 
-    if (!amount || !description || !remainingAmount) {
-      return res.status(400).json({
-        msg: "Semua field harus diisi",
+      const formattedPlans = plans.map((plan) => ({
+        ...plan.toJSON(),
+        categoryName: plan.Category ? plan.Category.name : null,
+      }));
+
+      res.json({
+        status: "success",
+        data: formattedPlans,
+      });
+    } catch (error) {
+      console.error("Error in get plans:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil rencana",
       });
     }
+  },
 
-    const result = await updatePlan(id, {
-      amount,
-      description,
-      remainingAmount,
-    });
+  getById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
 
-    if (result[0].affectedRows === 0) {
-      return res.status(404).json({
-        msg: "Perencanaan tidak ditemukan",
+      const plan = await Plan.findOne({
+        where: { id, userId },
+        include: [
+          {
+            model: Category,
+            attributes: ["name"],
+          },
+        ],
+      });
+
+      if (!plan) {
+        return res.status(404).json({
+          status: "error",
+          message: "Rencana tidak ditemukan",
+        });
+      }
+
+      res.json({
+        status: "success",
+        data: {
+          ...plan.toJSON(),
+          categoryName: plan.Category ? plan.Category.name : null,
+        },
+      });
+    } catch (error) {
+      console.error("Error in get plan:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil rencana",
       });
     }
+  },
 
-    res.json({
-      msg: "Perencanaan berhasil diperbarui",
-    });
-  } catch (error) {
-    console.error("Error updating plan:", error);
-    res.status(500).json({
-      msg: "Gagal memperbarui perencanaan",
-      error: error.message,
-    });
-  }
-};
+  update: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
+      const { categoryId, amount, description } = req.body;
 
-export const deletePlanController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await deletePlan(id);
+      const plan = await Plan.findOne({
+        where: { id, userId },
+      });
 
-    if (result[0].affectedRows === 0) {
-      return res.status(404).json({
-        msg: "Perencanaan tidak ditemukan",
+      if (!plan) {
+        return res.status(404).json({
+          status: "error",
+          message: "Rencana tidak ditemukan",
+        });
+      }
+
+      // Cek apakah kategori ada jika diupdate
+      if (categoryId) {
+        const category = await Category.findByPk(categoryId);
+        if (!category) {
+          return res.status(404).json({
+            status: "error",
+            message: "Kategori tidak ditemukan",
+          });
+        }
+      }
+
+      // Hitung selisih amount baru dengan amount lama
+      const amountDifference = amount - plan.amount;
+
+      // Update remainingAmount berdasarkan selisih
+      const newRemainingAmount = plan.remainingAmount + amountDifference;
+
+      // Update plan
+      await plan.update({
+        categoryId: categoryId || plan.categoryId,
+        amount: amount || plan.amount,
+        description: description || plan.description,
+        remainingAmount: Math.max(0, newRemainingAmount),
+      });
+
+      // Get category name
+      const category = await Category.findByPk(plan.categoryId);
+
+      res.json({
+        status: "success",
+        message: "Rencana berhasil diperbarui",
+        data: {
+          ...plan.toJSON(),
+          categoryName: category ? category.name : null,
+        },
+      });
+    } catch (error) {
+      console.error("Error in update plan:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal memperbarui rencana",
       });
     }
+  },
 
-    res.json({
-      msg: "Perencanaan berhasil dihapus",
-    });
-  } catch (error) {
-    console.error("Error deleting plan:", error);
-    res.status(500).json({
-      msg: "Gagal menghapus perencanaan",
-      error: error.message,
-    });
-  }
-};
+  delete: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
 
-export const updateRemainingAmountController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { amount } = req.body;
+      const plan = await Plan.findOne({
+        where: { id, userId },
+      });
 
-    if (!amount) {
-      return res.status(400).json({
-        msg: "Jumlah harus diisi",
+      if (!plan) {
+        return res.status(404).json({
+          status: "error",
+          message: "Rencana tidak ditemukan",
+        });
+      }
+
+      await plan.destroy();
+
+      res.json({
+        status: "success",
+        message: "Rencana berhasil dihapus",
+      });
+    } catch (error) {
+      console.error("Error in delete plan:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal menghapus rencana",
       });
     }
+  },
 
-    const result = await updateRemainingAmount(id, amount);
+  // Fungsi untuk memperbarui remainingAmount saat ada transaksi baru
+  async updateRemainingAmount(transaction) {
+    try {
+      if (transaction.type === "expense") {
+        const plan = await Plan.findOne({
+          where: {
+            categoryId: transaction.categoryId,
+            remainingAmount: { [Op.gt]: 0 },
+          },
+        });
 
-    if (result[0].affectedRows === 0) {
-      return res.status(404).json({
-        msg: "Perencanaan tidak ditemukan",
-      });
+        if (plan) {
+          const newRemainingAmount = plan.remainingAmount - transaction.amount;
+          await plan.update({
+            remainingAmount: Math.max(0, newRemainingAmount),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating remaining amount:", error);
+      throw error;
     }
-
-    res.json({
-      msg: "Sisa jumlah berhasil diperbarui",
-    });
-  } catch (error) {
-    console.error("Error updating remaining amount:", error);
-    res.status(500).json({
-      msg: "Gagal memperbarui sisa jumlah",
-      error: error.message,
-    });
-  }
+  },
 };

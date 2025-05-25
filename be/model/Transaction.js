@@ -1,89 +1,59 @@
-import db from "../config/database.js";
+import { DataTypes } from "sequelize";
+import sequelize from "../config/database.js";
+import User from "./User.js";
+import Category from "./Category.js";
 
-export const Transaction = {
-  create: async (transactionData) => {
-    const { userId, amount, categoryId, date, description, type } =
-      transactionData;
-    const query = `
-      INSERT INTO transactions 
-      (userId, amount, categoryId, date, description, type) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    return db.query(query, [
-      userId,
-      amount,
-      categoryId,
-      date,
-      description,
-      type,
-    ]);
+const Transaction = sequelize.define(
+  "Transaction",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    amount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.ENUM("income", "expense"),
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: User,
+        key: "id",
+      },
+    },
+    categoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Category,
+        key: "id",
+      },
+    },
   },
+  {
+    tableName: "transactions",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
+  }
+);
 
-  getById: async (id, userId) => {
-    const query = `
-      SELECT t.*, c.name as categoryName 
-      FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.id = ? AND t.userId = ?
-    `;
-    return db.query(query, [id, userId]);
-  },
+// Define associations
+Transaction.belongsTo(User, { foreignKey: "userId" });
+Transaction.belongsTo(Category, { foreignKey: "categoryId" });
 
-  getByUserId: async (userId) => {
-    const query = `
-      SELECT t.*, c.name as categoryName 
-      FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.userId = ? 
-      ORDER BY t.date DESC
-    `;
-    return db.query(query, [userId]);
-  },
-
-  getByDateRange: async (userId, startDate, endDate) => {
-    const query = `
-      SELECT t.*, c.name as categoryName 
-      FROM transactions t
-      LEFT JOIN categories c ON t.categoryId = c.id
-      WHERE t.userId = ? AND t.date BETWEEN ? AND ? 
-      ORDER BY t.date DESC
-    `;
-    return db.query(query, [userId, startDate, endDate]);
-  },
-
-  update: async (id, userId, transactionData) => {
-    const { amount, categoryId, date, description, type } = transactionData;
-    const query = `
-      UPDATE transactions 
-      SET amount = ?, categoryId = ?, date = ?, description = ?, type = ?
-      WHERE id = ? AND userId = ?
-    `;
-    return db.query(query, [
-      amount,
-      categoryId,
-      date,
-      description,
-      type,
-      id,
-      userId,
-    ]);
-  },
-
-  delete: async (id, userId) => {
-    const query = "DELETE FROM transactions WHERE id = ? AND userId = ?";
-    return db.query(query, [id, userId]);
-  },
-
-  deleteByUserId: async (userId) => {
-    try {
-      console.log("Deleting transactions for user:", userId);
-      const query = "DELETE FROM transactions WHERE userId = ?";
-      const [result] = await db.query(query, [userId]);
-      console.log("Transaction deletion result:", result);
-      return [result];
-    } catch (error) {
-      console.error("Error in Transaction.deleteByUserId:", error);
-      throw error;
-    }
-  },
-};
+export default Transaction;

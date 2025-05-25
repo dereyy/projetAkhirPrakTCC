@@ -1,7 +1,7 @@
 import express from "express";
-import { User } from "../model/User.js";
-import { Transaction } from "../model/Transaction.js";
-import { Category } from "../model/Category.js";
+import User from "../model/User.js";
+import Transaction from "../model/Transaction.js";
+import Category from "../model/Category.js";
 import { verifyToken } from "../middleware/Auth.js";
 import multer from "multer";
 import path from "path";
@@ -30,36 +30,23 @@ router.put(
   upload.single("foto_profil"),
   UserController.updateProfile
 );
+router.post("/logout", verifyToken, UserController.logout);
 
 // Delete user account
 router.delete("/delete", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.userId; // Menggunakan userId dari token
+    const userId = req.user.userId;
     console.log("Attempting to delete user with ID:", userId);
 
-    // Hapus semua transaksi user
+    // Delete all transactions
     console.log("Deleting transactions for user:", userId);
-    const [transactionResult] = await Transaction.deleteByUserId(userId);
-    console.log("Transaction deletion result:", transactionResult);
+    await Transaction.destroy({ where: { userId } });
 
-    // Hapus semua kategori user
-    console.log("Deleting categories for user:", userId);
-    const [categoryResult] = await Category.deleteByUserId(userId);
-    console.log("Category deletion result:", categoryResult);
-
-    // Hapus foto profil jika ada
-    console.log("Checking user profile photo");
-    const [user] = await User.findById(userId);
-    if (user && user.foto_profil) {
-      console.log("User has profile photo, will be deleted");
-    }
-
-    // Hapus user
+    // Delete user
     console.log("Deleting user:", userId);
-    const deleteResult = await User.delete(userId);
-    console.log("User deletion result:", deleteResult);
+    const result = await User.destroy({ where: { id: userId } });
 
-    if (!deleteResult) {
+    if (!result) {
       console.error("Failed to delete user");
       return res.status(500).json({
         status: "error",
@@ -73,13 +60,6 @@ router.delete("/delete", verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting user:", error);
-    console.error("Error details:", {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlMessage: error.sqlMessage,
-      sqlState: error.sqlState,
-    });
     res.status(500).json({
       status: "error",
       message: "Gagal menghapus akun: " + error.message,

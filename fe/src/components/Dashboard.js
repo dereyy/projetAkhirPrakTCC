@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import AddTransaction from "./AddTransaction";
 import "./Dashboard.css";
-import defaultProfile from './default-profile.png';
+import defaultProfile from "./default-profile.png";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
 
@@ -16,22 +16,27 @@ const Navbar = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/user/me', {
+        const response = await fetch(`${API_URL}/api/user/me`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         });
         if (response.ok) {
           const data = await response.json();
-          setUser(data);
-          
+          setUser(data.data);
+
           // Fetch profile photo
           try {
-            const photoResponse = await fetch('http://localhost:5001/api/user/profile/photo', {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            const photoResponse = await fetch(
+              `${API_URL}/api/user/profile/photo`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem(
+                    "accessToken"
+                  )}`,
+                },
               }
-            });
+            );
             if (photoResponse.ok) {
               const blob = await photoResponse.blob();
               const imageUrl = URL.createObjectURL(blob);
@@ -40,12 +45,12 @@ const Navbar = () => {
               setProfilePhoto(defaultProfile);
             }
           } catch (error) {
-            console.error('Error fetching profile photo:', error);
+            console.error("Error fetching profile photo:", error);
             setProfilePhoto(defaultProfile);
           }
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error("Error fetching user:", error);
       }
     };
 
@@ -53,22 +58,22 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    navigate('/login');
+    localStorage.removeItem("accessToken");
+    navigate("/login");
   };
 
   return (
     <div className="navbar-menu">
       {user && (
         <div className="user-menu">
-          <div 
-            className="user-profile" 
+          <div
+            className="user-profile"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <span className="username">Hallo, {user.name}!</span>
-            <img 
-              src={profilePhoto || defaultProfile} 
-              alt="Profile" 
+            <img
+              src={profilePhoto || defaultProfile}
+              alt="Profile"
               className="profile-picture"
               onError={(e) => {
                 e.target.onerror = null;
@@ -78,9 +83,15 @@ const Navbar = () => {
           </div>
           {isDropdownOpen && (
             <div className="dropdown-menu">
-              <Link to="/profile" className="dropdown-item">Profil Saya</Link>
-              <Link to="/categories" className="dropdown-item">Kategori</Link>
-              <button onClick={handleLogout} className="dropdown-item">Logout</button>
+              <Link to="/profile" className="dropdown-item">
+                Profil Saya
+              </Link>
+              <Link to="/categories" className="dropdown-item">
+                Kategori
+              </Link>
+              <button onClick={handleLogout} className="dropdown-item">
+                Logout
+              </button>
             </div>
           )}
         </div>
@@ -122,7 +133,8 @@ const Dashboard = () => {
       const categoryName = transaction.categoryName?.toLowerCase() || "";
       const description = transaction.description?.toLowerCase() || "";
       const amount = transaction.amount?.toString() || "";
-      const transactionType = transaction.type === "income" ? "pemasukan" : "pengeluaran";
+      const transactionType =
+        transaction.type === "income" ? "pemasukan" : "pengeluaran";
 
       return (
         description.includes(searchLower) ||
@@ -152,13 +164,13 @@ const Dashboard = () => {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/transactions`, {
+      const response = await axios.get(`${API_URL}/api/transaction`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
       console.log("Transactions response:", response.data);
-      setTransactions(response.data);
+      setTransactions(response.data.data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
       if (error.response) {
@@ -169,13 +181,13 @@ const Dashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/categories`, {
+      const response = await axios.get(`${API_URL}/api/category`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
       console.log("Categories response in Dashboard:", response.data);
-      setCategories(response.data);
+      setCategories(response.data.data);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -184,7 +196,7 @@ const Dashboard = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
       try {
-        await axios.delete(`${API_URL}/api/transactions/${id}`, {
+        await axios.delete(`${API_URL}/api/transaction/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
@@ -197,14 +209,9 @@ const Dashboard = () => {
           console.error("Error response:", error.response.data);
           alert(
             `Gagal menghapus transaksi: ${
-              error.response.data.msg || error.message
+              error.response.data.message || error.message
             }`
           );
-        } else if (error.request) {
-          console.error("Request error:", error.request);
-          alert("Gagal menghapus transaksi: Tidak dapat terhubung ke server.");
-        } else {
-          alert(`Gagal menghapus transaksi: ${error.message}`);
         }
       }
     }
@@ -274,6 +281,10 @@ const Dashboard = () => {
               </div>
             </div>
 
+            <button className="btn-add" onClick={() => setShowAddForm(true)}>
+              + Tambah Transaksi
+            </button>
+
             <div className="transaction-grid">
               {filteredTransactions.length === 0 ? (
                 <div id="no-data-message">
@@ -326,10 +337,6 @@ const Dashboard = () => {
                 ))
               )}
             </div>
-
-            <button className="btn-add" onClick={() => setShowAddForm(true)}>
-              + Tambah Transaksi
-            </button>
           </>
         )}
       </div>

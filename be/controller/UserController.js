@@ -1,5 +1,7 @@
 import bcrypt from "bcrypt";
-import { User } from "../model/User.js";
+import User from "../model/User.js";
+import Transaction from "../model/Transaction.js";
+import Category from "../model/Category.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -15,33 +17,44 @@ export const UserController = {
   register: async (req, res) => {
     try {
       const { name, email, gender, password } = req.body;
-      console.log("Register attempt for:", { name, email, gender });
 
-      // Cek email sudah terdaftar
-      const [existingUser] = await User.findByEmail(email);
+      // Check if email already exists
+      const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
-        console.log("Email already registered");
-        return res.status(400).json({ msg: "Email sudah terdaftar" });
+        return res.status(400).json({
+          status: "error",
+          message: "Email sudah terdaftar",
+        });
       }
 
       // Hash password
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
-      console.log("Password hashed successfully");
 
-      // Simpan user baru
-      const result = await User.create({
+      // Create user
+      const user = await User.create({
         name,
         email,
         gender,
         password: hashedPassword,
       });
-      console.log("User created successfully:", result);
 
-      res.status(201).json({ msg: "Registrasi berhasil" });
+      res.status(201).json({
+        status: "success",
+        message: "Registrasi berhasil",
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          gender: user.gender,
+        },
+      });
     } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in register:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal melakukan registrasi",
+      });
     }
   },
 
@@ -50,173 +63,189 @@ export const UserController = {
       const { email, password } = req.body;
       console.log("Login attempt for email:", email);
 
-      if (!email || !password) {
-        console.log("Missing email or password");
-        return res.status(400).json({ msg: "Email dan password harus diisi" });
-      }
-
-      // Cek user
-      const users = await User.findByEmail(email);
-      const user = users[0]; // Ambil user pertama dari array
-
+      // Find user by email
+      const user = await User.findOne({ where: { email } });
       if (!user) {
-        console.log("User not found");
-        return res.status(404).json({ msg: "User tidak ditemukan" });
+        console.log("User not found for email:", email);
+        return res.status(404).json({
+          status: "error",
+          message: "User tidak ditemukan",
+        });
       }
 
-      console.log("User found:", { id: user.id, email: user.email });
-
-      if (!user.password) {
-        console.log("User has no password set");
-        return res.status(500).json({ msg: "Data user tidak valid" });
-      }
-
-      // Cek password
+      // Check password
       const match = await bcrypt.compare(password, user.password);
-      console.log("Password comparison result:", match);
-
       if (!match) {
-        console.log("Password mismatch");
-        return res.status(400).json({ msg: "Password salah" });
+        console.log("Invalid password for email:", email);
+        return res.status(400).json({
+          status: "error",
+          message: "Password salah",
+        });
       }
 
-      console.log("Password match, generating tokens");
+      // Generate tokens
       const userId = user.id;
       const name = user.name;
       const userEmail = user.email;
+      const gender = user.gender;
 
-      const accessToken = generateAccessToken({ userId, name, userEmail });
-      const refreshToken = generateRefreshToken({ userId, name, userEmail });
-
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 1 hari
+      const accessToken = generateAccessToken({
+        userId,
+        name,
+        email: userEmail,
+        gender,
+      });
+      const refreshToken = generateRefreshToken({
+        userId,
+        name,
+        email: userEmail,
+        gender,
       });
 
-      console.log("Login successful");
-      res.json({ accessToken });
+      console.log("Generated tokens for user:", userId);
+
+      // Update refresh token in database
+      await user.update({ refresh_token: refreshToken });
+      console.log("Updated refresh token in database");
+
+      const response = {
+        status: "success",
+        message: "Login berhasil",
+        data: {
+          id: userId,
+          name,
+          email: userEmail,
+          gender,
+          accessToken,
+          refreshToken,
+        },
+      };
+
+      console.log("Sending login response:", response);
+      res.status(200).json(response);
     } catch (error) {
-      console.error("Login error:", error);
-      // Log stack trace untuk debugging
-      console.error("Stack trace:", error.stack);
+      console.error("Error in login:", error);
       res.status(500).json({
-        msg: "Terjadi kesalahan saat login",
-        error: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+        status: "error",
+        message: "Gagal melakukan login",
       });
     }
   },
 
-  getMe: async (req, res) => {
+  getProfile: async (req, res) => {
     try {
-      const [user] = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ msg: "User tidak ditemukan" });
-      }
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ msg: error.message });
-    }
-  },
+      const user = await User.findByPk(req.user.userId, {
+        attributes: ["id", "name", "email", "gender", "foto_profil"],
+      });
 
-  logout: async (req, res) => {
-    try {
-      res.clearCookie("refreshToken");
-      res.json({ msg: "Logout berhasil" });
+      if (!user) {
+        return res.status(404).json({
+          status: "error",
+          message: "User tidak ditemukan",
+        });
+      }
+
+      res.json({
+        status: "success",
+        data: user,
+      });
     } catch (error) {
-      res.status(500).json({ msg: error.message });
+      console.error("Error in getProfile:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil profil",
+      });
     }
   },
 
   getProfilePhoto: async (req, res) => {
     try {
-      const [user] = await User.findById(req.user.userId);
+      const user = await User.findByPk(req.user.userId, {
+        attributes: ["foto_profil"],
+      });
+
       if (!user || !user.foto_profil) {
-        // Jika user tidak memiliki foto profil, kirim default profile
         return res.status(404).json({
-          msg: "Foto profil tidak ditemukan",
+          status: "error",
+          message: "Foto profil tidak ditemukan",
           useDefault: true,
         });
       }
 
-      // Send the photo buffer
       res.writeHead(200, {
         "Content-Type": "image/jpeg",
         "Content-Length": user.foto_profil.length,
       });
       res.end(user.foto_profil);
     } catch (error) {
-      console.error("Error getting profile photo:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in getProfilePhoto:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil foto profil",
+      });
     }
   },
 
   updateProfile: async (req, res) => {
     try {
-      const userId = req.user.userId;
+      const { name, gender } = req.body;
       const updateData = {};
 
-      // Update basic info if provided
-      if (req.body.name) updateData.name = req.body.name;
-      if (req.body.email) updateData.email = req.body.email;
-      if (req.body.gender) updateData.gender = req.body.gender;
-      if (req.body.password) {
-        const salt = await bcrypt.genSalt();
-        updateData.password = await bcrypt.hash(req.body.password, salt);
+      if (name) updateData.name = name;
+      if (gender) updateData.gender = gender;
+      if (req.file) updateData.foto_profil = req.file.buffer;
+
+      const user = await User.findByPk(req.user.userId);
+      if (!user) {
+        return res.status(404).json({
+          status: "error",
+          message: "User tidak ditemukan",
+        });
       }
 
-      // Update photo if provided
-      if (req.file) {
-        try {
-          // File is already in memory as buffer
-          updateData.foto_profil = req.file.buffer;
-        } catch (error) {
-          console.error("Error processing photo:", error);
-          return res.status(500).json({ msg: "Gagal memproses foto profil" });
-        }
-      }
+      await user.update(updateData);
 
-      // If no data to update
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ msg: "Tidak ada data yang diupdate" });
-      }
-
-      // Check if email is already used by another user
-      if (updateData.email) {
-        const [existingUser] = await User.findByEmail(updateData.email);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(400).json({ msg: "Email sudah digunakan" });
-        }
-      }
-
-      // Update user data
-      const result = await User.update(userId, updateData);
-      if (!result) {
-        return res.status(404).json({ msg: "User tidak ditemukan" });
-      }
-
-      // Get updated user data
-      const [updatedUser] = await User.findById(userId);
       res.json({
-        msg: "Profile berhasil diupdate",
-        user: updatedUser,
+        status: "success",
+        message: "Profil berhasil diperbarui",
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          gender: user.gender,
+        },
       });
     } catch (error) {
-      console.error("Error updating profile:", error);
-      res.status(500).json({ msg: error.message });
+      console.error("Error in updateProfile:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal memperbarui profil",
+      });
     }
   },
 
-  getProfile: async (req, res) => {
+  logout: async (req, res) => {
     try {
-      const [user] = await User.findById(req.user.userId);
+      const user = await User.findByPk(req.user.userId);
       if (!user) {
-        return res.status(404).json({ msg: "User tidak ditemukan" });
+        return res.status(404).json({
+          status: "error",
+          message: "User tidak ditemukan",
+        });
       }
-      res.json(user);
+
+      await user.update({ refresh_token: null });
+
+      res.status(200).json({
+        status: "success",
+        message: "Logout berhasil",
+      });
     } catch (error) {
-      console.error("Error getting profile:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Error in logout:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Gagal melakukan logout",
+      });
     }
   },
 };

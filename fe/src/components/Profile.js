@@ -28,40 +28,52 @@ const Profile = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get("http://localhost:5001/api/user/me", {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/user/me`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-      const data = response.data;
-      setUser(data);
-      setFormData({
-        name: data.name,
-        email: data.email,
-        gender: data.gender || "",
-        foto_profil: null,
-      });
 
-      // Fetch profile photo
-      try {
-        const photoResponse = await axios.get(
-          "http://localhost:5001/api/user/profile/photo",
-          {
-            responseType: "blob",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-        const imageUrl = URL.createObjectURL(photoResponse.data);
-        setPreviewImage(imageUrl);
-      } catch (error) {
-        console.log("No profile photo found, using default");
-        setPreviewImage(defaultProfile);
+      if (response.data && response.data.data) {
+        const userData = response.data.data;
+        setUser(userData);
+        setFormData({
+          name: userData.name || "",
+          email: userData.email || "",
+          gender: userData.gender || "",
+          foto_profil: null,
+        });
+
+        // Fetch profile photo
+        try {
+          const photoResponse = await axios.get(
+            `${API_URL}/api/user/profile/photo`,
+            {
+              responseType: "blob",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          const imageUrl = URL.createObjectURL(photoResponse.data);
+          setPreviewImage(imageUrl);
+        } catch (error) {
+          console.log("No profile photo found, using default");
+          setPreviewImage(defaultProfile);
+        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
       setError("Gagal memuat data profil");
+      if (error.response && error.response.status === 401) {
+        navigate("/login");
+      }
     }
   };
 
@@ -85,7 +97,6 @@ const Profile = () => {
           let width = img.width;
           let height = img.height;
 
-          // Calculate new dimensions
           if (width > MAX_WIDTH) {
             height = Math.round((height * MAX_WIDTH) / width);
             width = MAX_WIDTH;
@@ -97,7 +108,6 @@ const Profile = () => {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to blob with reduced quality
           canvas.toBlob(
             (blob) => {
               resolve(
@@ -109,7 +119,7 @@ const Profile = () => {
             },
             "image/jpeg",
             0.7
-          ); // 70% quality
+          );
         };
         img.onerror = reject;
       };
@@ -160,42 +170,52 @@ const Profile = () => {
     }
 
     try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("Token tidak ditemukan");
+      }
+
       const response = await axios.put(
-        "http://localhost:5001/api/user/profile",
+        `${API_URL}/api/user/profile`,
         formDataToSend,
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      setUser(response.data);
 
-      // Refresh profile photo after update
-      try {
-        const photoResponse = await axios.get(
-          "http://localhost:5001/api/user/profile/photo",
-          {
-            responseType: "blob",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-        const imageUrl = URL.createObjectURL(photoResponse.data);
-        setPreviewImage(imageUrl);
-      } catch (error) {
-        console.log("No profile photo found, using default");
-        setPreviewImage(defaultProfile);
+      if (response.data && response.data.data) {
+        setUser(response.data.data);
+        setSuccess("Profil berhasil diperbarui");
+
+        // Refresh profile photo after update
+        try {
+          const photoResponse = await axios.get(
+            `${API_URL}/api/user/profile/photo`,
+            {
+              responseType: "blob",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          const imageUrl = URL.createObjectURL(photoResponse.data);
+          setPreviewImage(imageUrl);
+        } catch (error) {
+          console.log("No profile photo found, using default");
+          setPreviewImage(defaultProfile);
+        }
       }
-
-      setSuccess("Profil berhasil diperbarui");
     } catch (error) {
       console.error("Error updating profile:", error);
       setError(
         error.response?.data?.msg || "Terjadi kesalahan saat memperbarui profil"
       );
+      if (error.response && error.response.status === 401) {
+        navigate("/login");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -213,18 +233,13 @@ const Profile = () => {
           throw new Error("Token tidak ditemukan");
         }
 
-        // Hapus akun user
-        const response = await axios.delete(
-          "http://localhost:5001/api/user/delete",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axios.delete(`${API_URL}/api/user/delete`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (response.data.status === "success") {
-          // Hapus token dan redirect ke login
           localStorage.removeItem("accessToken");
           navigate("/login");
         } else {
@@ -233,19 +248,13 @@ const Profile = () => {
       } catch (error) {
         console.error("Error deleting account:", error);
         if (error.response) {
-          // Server merespons dengan status error
-          console.error("Error response:", error.response.data);
           setError(
             error.response.data.message ||
               "Gagal menghapus akun. Silakan coba lagi."
           );
         } else if (error.request) {
-          // Request dibuat tapi tidak ada response
-          console.error("No response received:", error.request);
           setError("Tidak dapat terhubung ke server. Silakan coba lagi.");
         } else {
-          // Error saat setup request
-          console.error("Error message:", error.message);
           setError("Terjadi kesalahan. Silakan coba lagi.");
         }
       }
@@ -253,102 +262,103 @@ const Profile = () => {
   };
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <div className="loading">Loading...</div>;
   }
 
   return (
-    <div className="profile-container">
-      <div className="profile-card">
-        <div
-          className="profile-image-container"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <img
-            src={previewImage || defaultProfile}
-            alt="Profile"
-            className="profile-image"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = defaultProfile;
-            }}
-          />
-          <div className="image-upload">
-            <label htmlFor="profile-picture" className="upload-button">
-              Ubah Foto
-            </label>
-            <input
-              type="file"
-              id="profile-picture"
-              name="foto_profil"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={{ display: "none" }}
-            />
+    <div className="profile-page">
+      <div className="profile-container">
+        <div className="profile-card">
+          <div className="profile-header">
+            <h2>Profil Saya</h2>
+          </div>
+          <div className="profile-content">
+            <div className="profile-image-container">
+              <img
+                src={previewImage || defaultProfile}
+                alt="Profile"
+                className="profile-image"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = defaultProfile;
+                }}
+              />
+              <div className="image-upload">
+                <label htmlFor="profile-picture" className="upload-button">
+                  Ubah Foto
+                </label>
+                <input
+                  type="file"
+                  id="profile-picture"
+                  name="foto_profil"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+            </div>
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            <form onSubmit={handleSubmit} className="profile-form">
+              <div className="form-group">
+                <label>Nama</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Pilih Gender</option>
+                  <option value="male">Laki-laki</option>
+                  <option value="female">Perempuan</option>
+                </select>
+              </div>
+              <div className="button-group">
+                <button
+                  type="button"
+                  className="back-button"
+                  onClick={() => navigate(-1)}
+                >
+                  Kembali
+                </button>
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+                <button
+                  type="button"
+                  className="delete-button"
+                  onClick={handleDeleteAccount}
+                >
+                  Hapus Akun
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-        {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">{success}</div>}
-        <form
-          onSubmit={handleSubmit}
-          className="profile-form"
-          style={{ marginTop: "2rem" }}
-        >
-          <div className="form-group">
-            <label>Nama</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="male">Laki-laki</option>
-              <option value="female">Perempuan</option>
-            </select>
-          </div>
-          <div className="button-group">
-            <button
-              type="button"
-              className="back-button"
-              onClick={() => navigate(-1)}
-            >
-              Kembali
-            </button>
-            <button type="submit" className="save-button" disabled={isLoading}>
-              {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
-            </button>
-            <button
-              type="button"
-              className="delete-button"
-              onClick={handleDeleteAccount}
-            >
-              Hapus Akun
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
