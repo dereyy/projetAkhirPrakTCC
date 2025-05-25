@@ -229,78 +229,50 @@ export const TransactionController = {
         type, // type baru
       });
 
-      // Logika untuk recalculate plan(s)
-      // 1. Jika kategori lama adalah bagian dari plan dan transaksi lama adalah expense, recalculate plan lama.
-      if (oldType === "expense") {
+      // Logika untuk recalculate plan(s) setelah transaksi diupdate
+      const newActualCategoryId = transaction.categoryId; // Kategori setelah update
+      const newActualType = transaction.type; // Tipe setelah update
+
+      // Jika transaksi lama adalah pengeluaran, hitung ulang plan untuk kategori lama.
+      // Ini akan mengembalikan efek transaksi lama pada plan kategori lama.
+      if (oldType === 'expense') {
         try {
           await PlanController.recalculateForPlanByCategory(userId, oldCategoryId);
           console.log(
-            `Recalculated plan for old category ${oldCategoryId} after transaction update ${transaction.id}`
+            `Recalculated plan for old category ${oldCategoryId} (due to transaction update ${transaction.id})`
           );
         } catch (recalcError) {
           console.error(
-            `Error recalculating plan for old category ${oldCategoryId} after transaction update:`,
+            `Error recalculating plan for old category ${oldCategoryId} (transaction update):`,
             recalcError
           );
         }
       }
 
-      // 2. Jika kategori baru (atau sama) adalah bagian dari plan dan transaksi baru adalah expense, recalculate plan baru.
-      // Ini juga menangani kasus jika kategori tidak berubah tapi amount/type berubah.
-      if (type === "expense") { // type baru
-        // Jika kategori berubah dan kategori baru berbeda dari lama, atau jika kategori sama.
-        // Kondisi oldCategoryId !== categoryId sudah implisit ditangani jika oldType bukan expense atau type baru bukan expense.
-        // Cukup panggil untuk categoryId baru jika type baru adalah expense.
-        // Jika oldCategoryId sama dengan categoryId baru, ini akan dipanggil sekali, yang benar.
-        // Jika oldCategoryId berbeda dan oldType expense, plan lama sudah di-recalculate.
-        // Sekarang recalculate plan baru jika type baru adalah expense.
-        if (oldCategoryId !== categoryId && oldType === "expense") {
-          // Jika kategori berubah DAN tipe lama adalah expense, plan lama sudah dihitung.
-          // Sekarang hitung plan baru jika tipe baru adalah expense.
-           try {
-            await PlanController.recalculateForPlanByCategory(userId, categoryId); // categoryId baru
+      // Jika transaksi baru adalah pengeluaran, hitung ulang plan untuk kategori baru.
+      // Ini akan menerapkan efek transaksi baru pada plan kategori baru.
+      // Jika oldCategoryId sama dengan newActualCategoryId, ini akan menghitung ulang plan yang sama,
+      // yang efektif memperbarui sisa berdasarkan perubahan amount atau jika tipe berubah dari income ke expense.
+      if (newActualType === 'expense') {
+        // Hanya panggil untuk kategori baru jika berbeda dari kategori lama yang sudah dihitung ulang (jika oldType expense),
+        // atau jika tipe lama bukan expense (jadi kategori lama tidak dihitung ulang).
+        if (oldCategoryId !== newActualCategoryId || oldType !== 'expense') {
+          try {
+            await PlanController.recalculateForPlanByCategory(userId, newActualCategoryId);
             console.log(
-              `Recalculated plan for new category ${categoryId} after transaction update ${transaction.id}`
+              `Recalculated plan for new/current category ${newActualCategoryId} (due to transaction update ${transaction.id})`
             );
           } catch (recalcError) {
             console.error(
-              `Error recalculating plan for new category ${categoryId} after transaction update:`,
+              `Error recalculating plan for new/current category ${newActualCategoryId} (transaction update):`,
               recalcError
             );
           }
-        } else if (oldCategoryId === categoryId) {
-          // Jika kategori tidak berubah, cukup recalculate sekali untuk kategori tersebut
-          // (jika tipe lama atau baru adalah expense, ini akan mengcovernya)
-           try {
-            await PlanController.recalculateForPlanByCategory(userId, categoryId);
-            console.log(
-              `Recalculated plan for category ${categoryId} (no change or type/amount change) after transaction update ${transaction.id}`
-            );
-          } catch (recalcError) {
-            console.error(
-              `Error recalculating plan for category ${categoryId} (no change or type/amount change) after transaction update:`,
-              recalcError
-            );
-          }
-        } else if (type === "expense" && oldType !== 'expense') {
-            // Kategori berubah, tipe lama bukan expense, tipe baru expense
-             try {
-                await PlanController.recalculateForPlanByCategory(userId, categoryId); // categoryId baru
-                console.log(
-                `Recalculated plan for new category ${categoryId} (was not expense, now is) after transaction update ${transaction.id}`
-                );
-            } catch (recalcError) {
-                console.error(
-                `Error recalculating plan for new category ${categoryId} (was not expense, now is) after transaction update:`,
-                recalcError
-                );
-            }
         }
       }
 
-
-      // Get category name for response
-      const category = await Category.findByPk(categoryId); // categoryId baru
+      // Get category name for response (gunakan categoryId dari transaksi yang sudah diupdate)
+      const category = await Category.findByPk(newActualCategoryId);
 
       res.json({
         status: "success",
