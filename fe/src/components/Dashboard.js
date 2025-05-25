@@ -191,13 +191,16 @@ const Dashboard = () => {
         ) : (
           <>
             <div className="search-container">
-              <input
-                type="text"
-                placeholder="Cari berdasarkan deskripsi, kategori, jumlah, atau tipe transaksi..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
+              <div className="search-input-wrapper">
+                <i className="fas fa-search search-icon"></i>
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan deskripsi, kategori, jumlah, atau tipe transaksi..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
             </div>
 
             <div className="transaction-grid">
