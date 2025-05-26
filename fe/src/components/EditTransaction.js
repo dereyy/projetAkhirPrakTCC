@@ -80,15 +80,18 @@ const EditTransaction = () => {
     setIsLoading(true);
 
     try {
+      const amountInRupiah = parseInt(formData.amount);
+
       const response = await axios.put(
         `${API_URL}/api/transaction/${id}`,
         {
           ...formData,
-          amount: parseFloat(formData.amount),
+          amount: amountInRupiah,
         },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json",
           },
         }
       );

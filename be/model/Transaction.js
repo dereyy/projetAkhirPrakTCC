@@ -12,7 +12,7 @@ const Transaction = sequelize.define(
       autoIncrement: true,
     },
     amount: {
-      type: DataTypes.DECIMAL(15, 2),
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     description: {
