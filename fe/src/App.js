@@ -43,7 +43,7 @@ function App() {
       try {
         console.log("Attempting to refresh access token...");
         const response = await axios.post(
-          `${process.env.REACT_APP_API_URL || "http://localhost:5001"}/api/user/refresh-token`,
+          `${process.env.REACT_APP_API_URL || "http://projek-akhir-505940949397.us-central1.run.app"}/api/user/refresh-token`,
           { refreshToken: currentRefreshToken }
         );
 
