@@ -116,6 +116,7 @@ const FinancialPlanning = () => {
       categoryId: plan.categoryId,
       amount: plan.amount,
       description: plan.description,
+      remainingAmount: plan.amount,
     });
     setShowAddForm(true);
   };
@@ -129,6 +130,7 @@ const FinancialPlanning = () => {
           categoryId: newPlan.categoryId,
           amount: Number(newPlan.amount),
           description: newPlan.description,
+          remainingAmount: Number(newPlan.amount),
         };
         console.log("Mengupdate plan dengan data:", planData);
         const response = await axios.put(
@@ -148,6 +150,7 @@ const FinancialPlanning = () => {
           categoryId: newPlan.categoryId,
           amount: Number(newPlan.amount),
           description: newPlan.description,
+          remainingAmount: Number(newPlan.amount),
         };
         console.log("Membuat plan baru dengan data:", planData);
         const response = await axios.post(`${API_URL}/api/plan`, planData, {
