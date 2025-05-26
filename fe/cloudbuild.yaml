@@ -1,0 +1,38 @@
+steps:
+  # Step 1: Install dependencies jika belum ada
+  - name: "gcr.io/cloud-builders/npm"  # Menggunakan image resmi npm dari Google Cloud
+    entrypoint: bash  # Menjalankan perintah di dalam bash
+    args:
+      - -c
+      - |
+        if [ ! -d "node_modules" ]; then  # Cek apakah folder node_modules sudah ada
+          echo "Installing dependencies..."  # Menampilkan pesan ke log
+          npm ci  # Install dependencies berdasarkan package-lock.json untuk memastikan versi tetap
+        else
+          echo "Skipping npm install, node_modules exists."  # Jika sudah ada, skip install
+        fi
+    dir: "fe"  # Mengatur direktori kerja ke "fe" (bukan "notes_fe")
+    volumes:
+      - name: "npm-cache"
+        path: /root/.npm  # Menyimpan cache npm untuk mempercepat build selanjutnya
+
+  # Step 2: Build frontend React
+  - name: "gcr.io/cloud-builders/npm"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        npm run build  # Menjalankan proses build React
+    dir: "fe"  # Mengatur direktori kerja ke "fe"
+    volumes:
+      - name: "npm-cache"
+        path: /root/.npm  # Menggunakan cache npm agar lebih cepat
+
+  # Step 3: Deploy ke App Engine
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"  # Menggunakan image resmi Google Cloud SDK
+    entrypoint: gcloud  # Menjalankan perintah gcloud
+    args: ["app", "deploy", "--quiet"]  # Deploy aplikasi ke App Engine tanpa konfirmasi manual
+    dir: "fe"  # Mengatur direktori kerja ke "fe"
+
+options:
+  logging: CLOUD_LOGGING_ONLY  # Log hanya akan disimpan di Google Cloud Logging
