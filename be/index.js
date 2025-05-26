@@ -36,8 +36,9 @@ app.use((req, res, next) => {
 // CORS configuration
 const allowedOrigins = [
   "http://localhost:3000",
-  // 'https://frontend-moneytracker-dot-b-08-450916.uc.r.appspot.com', // GCP URL (dikomentari)
-  'https://fe-projek-akhir-dot-b-08-450916.uc.r.appspot.com/' // GCP URL (dikomentari)
+  "https://projek-akhir-505940949397.us-central1.run.app",
+  "http://projek-akhir-505940949397.us-central1.run.app",
+  "https://fe-projek-akhir-dot-b-08-450916.uc.r.appspot.com"
 ];
 
 app.use(cookieParser());
@@ -47,8 +48,8 @@ app.use(
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.indexOf(origin) === -1) {
-        const msg =
-          "The CORS policy for this site does not allow access from the specified Origin.";
+        console.log("Origin yang ditolak:", origin);
+        const msg = "The CORS policy for this site does not allow access from the specified Origin.";
         return callback(new Error(msg), false);
       }
       return callback(null, true);
