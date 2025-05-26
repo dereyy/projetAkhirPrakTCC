@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   "http://localhost:3000",
   // 'https://frontend-moneytracker-dot-b-08-450916.uc.r.appspot.com', // GCP URL (dikomentari)
-  // 'https://fe-moneytracker-505940949397.us-central1.run.app' // GCP URL (dikomentari)
+  'https://fe-projek-akhir-dot-b-08-450916.uc.r.appspot.com/' // GCP URL (dikomentari)
 ];
 
 app.use(cookieParser());
