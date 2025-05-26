@@ -130,7 +130,7 @@ const FinancialPlanning = () => {
           categoryId: newPlan.categoryId,
           amount: Number(newPlan.amount),
           description: newPlan.description,
-          remainingAmount: Number(newPlan.amount),
+          // remainingAmount tidak perlu dikirim, akan dihitung di backend
         };
         console.log("Mengupdate plan dengan data:", planData);
         const response = await axios.put(

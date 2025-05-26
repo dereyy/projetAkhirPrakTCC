@@ -176,28 +176,30 @@ export const PlanController = {
         }
       }
 
-      // Hitung selisih amount baru dengan amount lama
-      const amountDifference = amount - plan.amount;
-
-      // Update remainingAmount berdasarkan selisih
-      const newRemainingAmount = plan.remainingAmount + amountDifference;
-
-      // Update plan
+      // Update plan's amount and other fields first
       await plan.update({
         categoryId: categoryId || plan.categoryId,
         amount: amount || plan.amount,
         description: description || plan.description,
-        remainingAmount: Math.max(0, newRemainingAmount),
+        // remainingAmount will be updated by recalculateForPlanByCategory
+      });
+
+      // Recalculate remainingAmount based on actual expenses
+      await this.recalculateForPlanByCategory(userId, plan.categoryId);
+
+      // Fetch the updated plan to get the new remainingAmount
+      const updatedPlan = await Plan.findOne({
+        where: { id, userId },
       });
 
       // Get category name
-      const category = await Category.findByPk(plan.categoryId);
+      const category = await Category.findByPk(updatedPlan.categoryId);
 
       res.json({
         status: "success",
         message: "Rencana berhasil diperbarui",
         data: {
-          ...plan.toJSON(),
+          ...updatedPlan.toJSON(),
           categoryName: category ? category.name : null,
         },
       });
