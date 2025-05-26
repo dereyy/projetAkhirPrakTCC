@@ -4,7 +4,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import config from "../config";
 import "./EditTransaction.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://projek-akhir-505940949397.us-central1.run.app";
 
 const EditTransaction = () => {
   const { id } = useParams(); // Mengambil ID transaksi dari URL
@@ -52,9 +54,10 @@ const EditTransaction = () => {
 
       // Ambil data transaksi dari response.data.data
       // Asumsi backend mengembalikan objek transaksi di dalam properti 'data'
-      const transaction = response.data && response.data.data 
-        ? response.data.data 
-        : response.data; // Fallback jika tidak ada .data atau struktur berbeda
+      const transaction =
+        response.data && response.data.data
+          ? response.data.data
+          : response.data; // Fallback jika tidak ada .data atau struktur berbeda
 
       console.log("Processed transaction data:", transaction);
 

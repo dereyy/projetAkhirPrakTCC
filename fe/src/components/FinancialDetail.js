@@ -3,7 +3,9 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./FinancialDetail.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://projek-akhir-505940949397.us-central1.run.app";
 
 const FinancialDetail = () => {
   const [transactions, setTransactions] = useState([]);

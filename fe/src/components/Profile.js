@@ -6,7 +6,9 @@ import axios from "axios";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_WIDTH = 800; // Maximum width for compressed image
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://projek-akhir-505940949397.us-central1.run.app";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -253,14 +255,20 @@ const Profile = () => {
       } catch (error) {
         console.error("Error deleting account:", error);
         let errorMessageForAlert = "Terjadi kesalahan. Silakan coba lagi.";
-        if (error.response && error.response.data && error.response.data.message) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
           errorMessageForAlert = error.response.data.message;
           setError(errorMessageForAlert);
         } else if (error.response) {
-          errorMessageForAlert = "Gagal menghapus akun dari server. Silakan coba lagi.";
+          errorMessageForAlert =
+            "Gagal menghapus akun dari server. Silakan coba lagi.";
           setError(errorMessageForAlert);
         } else if (error.request) {
-          errorMessageForAlert = "Tidak dapat terhubung ke server. Silakan coba lagi.";
+          errorMessageForAlert =
+            "Tidak dapat terhubung ke server. Silakan coba lagi.";
           setError(errorMessageForAlert);
         } else {
           setError(errorMessageForAlert);

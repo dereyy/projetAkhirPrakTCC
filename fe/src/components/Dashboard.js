@@ -5,7 +5,9 @@ import AddTransaction from "./AddTransaction";
 import "./Dashboard.css";
 import defaultProfile from "./default-profile.png";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://projek-akhir-505940949397.us-central1.run.app";
 
 const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
