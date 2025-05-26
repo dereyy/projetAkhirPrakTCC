@@ -154,6 +154,8 @@ export const PlanController = {
       const userId = req.user.userId;
       const { categoryId, amount, description } = req.body;
 
+      console.log("Updating plan with data:", { categoryId, amount, description });
+
       const plan = await Plan.findOne({
         where: { id, userId },
       });
@@ -176,38 +178,45 @@ export const PlanController = {
         }
       }
 
-      // Update plan's amount and other fields first
-      await plan.update({
-        categoryId: categoryId || plan.categoryId,
-        amount: amount || plan.amount,
-        description: description || plan.description,
-        // remainingAmount will be updated by recalculateForPlanByCategory
-      });
+      try {
+        // Update plan's amount and other fields first
+        await plan.update({
+          categoryId: categoryId || plan.categoryId,
+          amount: amount || plan.amount,
+          description: description || plan.description,
+        });
 
-      // Recalculate remainingAmount based on actual expenses
-      await this.recalculateForPlanByCategory(userId, plan.categoryId);
+        // Recalculate remainingAmount based on actual expenses
+        await PlanController.recalculateForPlanByCategory(userId, plan.categoryId);
 
-      // Fetch the updated plan to get the new remainingAmount
-      const updatedPlan = await Plan.findOne({
-        where: { id, userId },
-      });
+        // Fetch the updated plan
+        const updatedPlan = await Plan.findOne({
+          where: { id, userId },
+          include: [{ model: Category, attributes: ["name"] }],
+        });
 
-      // Get category name
-      const category = await Category.findByPk(updatedPlan.categoryId);
+        if (!updatedPlan) {
+          throw new Error("Failed to fetch updated plan");
+        }
 
-      res.json({
-        status: "success",
-        message: "Rencana berhasil diperbarui",
-        data: {
-          ...updatedPlan.toJSON(),
-          categoryName: category ? category.name : null,
-        },
-      });
+        res.json({
+          status: "success",
+          message: "Rencana berhasil diperbarui",
+          data: {
+            ...updatedPlan.toJSON(),
+            categoryName: updatedPlan.Category ? updatedPlan.Category.name : null,
+          },
+        });
+      } catch (updateError) {
+        console.error("Error during plan update:", updateError);
+        throw updateError;
+      }
     } catch (error) {
       console.error("Error in update plan:", error);
       res.status(500).json({
         status: "error",
         message: "Gagal memperbarui rencana",
+        detail: error.message
       });
     }
   },
